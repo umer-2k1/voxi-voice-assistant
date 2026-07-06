@@ -1,0 +1,23 @@
+{
+  "name": "voxi-voice-assistant",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@10.5.0",
+  "scripts": {
+    "prepare": "husky",
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "tauri": "tauri",
+    "dev:web": "pnpm --filter @vox/frontend dev",
+    "dev:sidecar": "pnpm --filter @vox/sidecar dev",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "format": "pnpm -r format",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.9.6",
+    "husky": "9.1.7"
+  }
+}

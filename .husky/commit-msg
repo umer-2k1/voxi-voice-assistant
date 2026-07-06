@@ -1,3 +1,2 @@
-export NODE_OPTIONS="--experimental-strip-types"
-
-npx --no -- commitlint --edit ${1}
+MSG_FILE="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
+cd frontend && npx --no -- commitlint --edit "$MSG_FILE"

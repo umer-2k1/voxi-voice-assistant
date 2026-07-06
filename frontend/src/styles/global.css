@@ -4,22 +4,61 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Vox design system — "Halcyon" · Light · v1.0
+ * Source of truth: docs/context/design-tokens.txt (extracted from Vox Design System.html)
+ * One accent (Vox Blue), cool neutrals, borders-first elevation, motion only on voice.
+ */
+
 @theme inline {
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--vox-font-sans);
+  --font-mono: var(--vox-font-mono);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 9px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 18px; /* window radius */
 
+  /* Vox palette */
+  --color-vox-50: #eef0fe;
+  --color-vox-100: #e0e4fd;
+  --color-vox-200: #c3cafb;
+  --color-vox-300: #9aa5f6;
+  --color-vox-400: #6e79f0;
+  --color-vox-500: #4b57e8;
+  --color-vox-600: #3d48d6;
+  --color-vox-700: #333cb4;
+  --color-vox-800: #2c337e;
+
+  --color-ink: #1a1c22;
+  --color-gray-900: #23262e;
+  --color-gray-700: #3a3f4a;
+  --color-gray-500: #6b707c;
+  --color-gray-400: #9aa0ad;
+  --color-gray-300: #c2c7d2;
+  --color-gray-200: #e4e6ec;
+  --color-gray-150: #eceef3;
+  --color-gray-100: #f6f7fa;
+  --color-gray-50: #fbfbfd;
+
+  --color-success: #22a366;
+  --color-success-bg: #e7f6ee;
+  --color-caution: #e0a32e;
+  --color-caution-bg: #fffcf4;
+  --color-caution-line: #f0e4c6;
+  --color-caution-text: #9a7a20;
+  --color-danger: #dc4b43;
+  --color-danger-bg: #fdecea;
+
+  --color-surface-app: #e4e6ea;
+  --color-surface-inset: #fafafe;
+
+  /* shadcn semantic mapping */
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
@@ -31,18 +70,10 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
-
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
-
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -51,84 +82,115 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Elevation — borders first; shadow only for genuine floats */
+  --shadow-sm: 0 1px 2px rgba(20, 22, 45, 0.06);
+  --shadow-card: 0 1px 3px rgba(20, 22, 45, 0.06), 0 1px 2px rgba(20, 22, 45, 0.04);
+  --shadow-md: 0 8px 24px -12px rgba(20, 22, 45, 0.18);
+  --shadow-pop: 0 12px 32px -12px rgba(20, 22, 45, 0.24);
+  --shadow-window: 0 40px 90px -40px rgba(20, 22, 45, 0.4);
+  --shadow-glow: 0 8px 20px -6px rgba(75, 87, 232, 0.55);
+
+  /* Motion — only the voice moves */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --animate-equalizer: vox-equalizer 0.95s var(--ease-inout) infinite;
+  --animate-listening-pulse: vox-pulse 2.1s var(--ease-out) infinite;
+
+  @keyframes vox-equalizer {
+    0%,
+    100% {
+      transform: scaleY(0.35);
+    }
+    50% {
+      transform: scaleY(1);
+    }
+  }
+
+  @keyframes vox-pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(75, 87, 232, 0.35);
+    }
+    70% {
+      box-shadow: 0 0 0 14px rgba(75, 87, 232, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(75, 87, 232, 0);
+    }
+  }
 }
 
 :root {
-  --radius: 0.45rem;
+  --vox-font-sans:
+    'Hanken Grotesk Variable', 'Hanken Grotesk', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --vox-font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
-  --border: oklch(0.928 0.006 264.531);
-  --input: oklch(0.928 0.006 264.531);
-  --ring: oklch(0.707 0.022 261.325);
+  --radius: 12px;
 
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.13 0.028 261.692);
-  --primary: oklch(0.61 0.11 222);
-  --primary-foreground: oklch(0.98 0.02 201);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.003 264.542);
-  --muted-foreground: oklch(0.551 0.027 264.364);
-  --accent: oklch(0.61 0.11 222);
-  --accent-foreground: oklch(0.98 0.02 201);
-  --destructive: oklch(0.577 0.245 27.325);
+  --border: #e4e6ec; /* gray-200 */
+  --input: #e4e6ec;
+  --ring: rgba(75, 87, 232, 0.28);
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.13 0.028 261.692);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.13 0.028 261.692);
+  --background: #ffffff;
+  --foreground: #1a1c22; /* ink */
+  --primary: #4b57e8; /* vox-500 */
+  --primary-foreground: #ffffff;
+  --secondary: #f6f7fa; /* gray-100 */
+  --secondary-foreground: #3a3f4a; /* gray-700 */
+  --muted: #f6f7fa;
+  --muted-foreground: #6b707c; /* gray-500 */
+  --accent: #eef0fe; /* vox-50 tint */
+  --accent-foreground: #2c337e; /* vox-800 on tint */
+  --destructive: #dc4b43;
 
-  --chart-1: oklch(0.87 0.12 207);
-  --chart-2: oklch(0.8 0.13 212);
-  --chart-3: oklch(0.71 0.13 215);
-  --chart-4: oklch(0.61 0.11 222);
-  --chart-5: oklch(0.52 0.09 223);
+  --card: #ffffff;
+  --card-foreground: #1a1c22;
+  --popover: #ffffff;
+  --popover-foreground: #1a1c22;
 
-  --sidebar: oklch(0.985 0.002 247.839);
-  --sidebar-foreground: oklch(0.13 0.028 261.692);
-  --sidebar-primary: oklch(0.61 0.11 222);
-  --sidebar-primary-foreground: oklch(0.98 0.02 201);
-  --sidebar-accent: oklch(0.61 0.11 222);
-  --sidebar-accent-foreground: oklch(0.98 0.02 201);
-  --sidebar-border: oklch(0.928 0.006 264.531);
-  --sidebar-ring: oklch(0.707 0.022 261.325);
+  --sidebar: #fbfbfd; /* gray-50 raised */
+  --sidebar-foreground: #3a3f4a;
+  --sidebar-primary: #4b57e8;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eef0fe;
+  --sidebar-accent-foreground: #2c337e;
+  --sidebar-border: #eceef3; /* gray-150 subtle */
+  --sidebar-ring: rgba(75, 87, 232, 0.28);
 }
 
+/*
+ * The design system is light-only ("Halcyon · Light · v1.0").
+ * Dark values intentionally mirror light so a stray `.dark` class
+ * cannot produce an unstyled hybrid; a dark theme is post-prototype.
+ */
 .dark {
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-
-  --background: oklch(0.13 0.028 261.692);
-  --foreground: oklch(0.985 0.002 247.839);
-  --primary: oklch(0.71 0.13 215);
-  --primary-foreground: oklch(0.3 0.05 230);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.278 0.033 256.848);
-  --muted-foreground: oklch(0.707 0.022 261.325);
-  --accent: oklch(0.71 0.13 215);
-  --accent-foreground: oklch(0.3 0.05 230);
-  --destructive: oklch(0.704 0.191 22.216);
-
-  --card: oklch(0.21 0.034 264.665);
-  --card-foreground: oklch(0.985 0.002 247.839);
-  --popover: oklch(0.21 0.034 264.665);
-  --popover-foreground: oklch(0.985 0.002 247.839);
-
-  --chart-1: oklch(0.87 0.12 207);
-  --chart-2: oklch(0.8 0.13 212);
-  --chart-3: oklch(0.71 0.13 215);
-  --chart-4: oklch(0.61 0.11 222);
-  --chart-5: oklch(0.52 0.09 223);
-
-  --sidebar: oklch(0.21 0.034 264.665);
-  --sidebar-foreground: oklch(0.985 0.002 247.839);
-  --sidebar-primary: oklch(0.8 0.13 212);
-  --sidebar-primary-foreground: oklch(0.3 0.05 230);
-  --sidebar-accent: oklch(0.71 0.13 215);
-  --sidebar-accent-foreground: oklch(0.3 0.05 230);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --border: #e4e6ec;
+  --input: #e4e6ec;
+  --ring: rgba(75, 87, 232, 0.28);
+  --background: #ffffff;
+  --foreground: #1a1c22;
+  --primary: #4b57e8;
+  --primary-foreground: #ffffff;
+  --secondary: #f6f7fa;
+  --secondary-foreground: #3a3f4a;
+  --muted: #f6f7fa;
+  --muted-foreground: #6b707c;
+  --accent: #eef0fe;
+  --accent-foreground: #2c337e;
+  --destructive: #dc4b43;
+  --card: #ffffff;
+  --card-foreground: #1a1c22;
+  --popover: #ffffff;
+  --popover-foreground: #1a1c22;
+  --sidebar: #fbfbfd;
+  --sidebar-foreground: #3a3f4a;
+  --sidebar-primary: #4b57e8;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eef0fe;
+  --sidebar-accent-foreground: #2c337e;
+  --sidebar-border: #eceef3;
+  --sidebar-ring: rgba(75, 87, 232, 0.28);
 }
 
 @layer base {
@@ -138,33 +200,17 @@
 
   body {
     @apply bg-background text-foreground;
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
   }
 
-  .github-corner:hover .octo-arm {
-    animation: octocat-wave 560ms ease-in-out;
-  }
-
-  @keyframes octocat-wave {
-    0%,
-    100% {
-      transform: rotate(0);
-    }
-    20%,
-    60% {
-      transform: rotate(-25deg);
-    }
-    40%,
-    80% {
-      transform: rotate(10deg);
-    }
-  }
-
-  @media (max-width: 500px) {
-    .github-corner:hover .octo-arm {
-      animation: none;
-    }
-    .github-corner .octo-arm {
-      animation: octocat-wave 560ms ease-in-out;
-    }
+  /* Machine text: system labels, timestamps, keycaps, connector names */
+  .mono-label {
+    font-family: var(--vox-font-mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
   }
 }
