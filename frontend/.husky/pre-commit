@@ -1,0 +1,4 @@
+export NODE_OPTIONS="--experimental-strip-types"
+
+npx lint-staged
+npx tsc --noEmit
