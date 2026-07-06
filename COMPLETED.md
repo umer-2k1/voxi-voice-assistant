@@ -34,6 +34,25 @@ Finished features and milestones, most recent first. Mirrors `docs/tasks/complet
 - Confirm gate wrapper already in place (default-deny classifier) — UI card lands in M6
 - Keychain secrets (store/delete/has + core-channel read); eval harness seeded (S2, S4 cases) + CI step
 
+## 2026-07-07 — M5–M8 surfaces (code complete; live validation pending user keys/interaction)
+
+### M5 — Connectors tab + GitHub MCP + PAT ✅ (code)
+- Connector CRUD in `connectors.json` (always added disabled; stdio command shown verbatim before enable, PRD §9.4), config pushed to sidecar on change
+- Test connection + tool list over the authenticated UI channel; GitHub preset (hosted MCP URL + PAT → keychain)
+- Core channel rebuilt on tokio-tungstenite with an on-demand sender (config pushes from any command)
+
+### M6 — Confirm-before-acting UI ✅ (code)
+- Caution-styled confirm card in the overlay: exact tool + params, Confirm & run / Deny; overlay resizes to fit
+- Deny resumes the interrupt with a clean "cancelled by user" tool message (S8); transcript notes the pending confirmation
+
+### M7 — Text insertion ✅ (code)
+- insert_text via enigo (implemented in M4's core channel); secure-input/permission failures surface as a transcript notice (P6)
+
+### M8 — Settings + onboarding ✅ (code)
+- Settings: hotkey keycap recorder, Groq/Ollama provider toggle (S7), model field, STT model select with download, Groq key paste → keychain
+- macOS permissions banner: AXIsProcessTrusted check, System Settings deep-links, re-check (Windows no-op)
+- Playwright smoke tests replaced boilerplate demos; eval harness runs keyless via VOX_EVAL_PROVIDER=ollama
+
 ## Planning (2026-07-06)
 - PRD v1.1 + design system reviewed; 119 tokens extracted; implementation plan approved
 

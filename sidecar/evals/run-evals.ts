@@ -26,7 +26,29 @@ interface EvalCase {
   connectors?: Parameters<typeof mcpManager.rebuild>[0];
 }
 
+const GITHUB_PAT = process.env['GITHUB_PAT'];
+
 const CASES: EvalCase[] = [
+  // S3 runs only when a PAT is provided (hosted GitHub MCP needs auth).
+  ...(GITHUB_PAT
+    ? [
+        {
+          id: 'S3 most-starred github repos',
+          utterance: 'Show my most starred GitHub repositories',
+          expectTool: /repo|search|star/i,
+          connectors: [
+            {
+              id: 'gh',
+              name: 'github',
+              transport: 'http' as const,
+              url: 'https://api.githubcopilot.com/mcp/',
+              enabled: true,
+              secret_ref: 'eval_github_pat'
+            }
+          ]
+        }
+      ]
+    : []),
   {
     id: 'S2 open documents folder',
     utterance: 'Open my Documents folder',
@@ -57,10 +79,12 @@ if (provider === 'groq' && !process.env['GROQ_API_KEY']) {
   process.exit(0);
 }
 
-// Stub the core channel: system actions succeed without a Rust core.
+// Stub the core channel: system actions succeed without a Rust core,
+// and the GitHub PAT (if any) is served from the environment.
 coreBridge.attach(() => undefined);
 coreBridge.systemAction = async () => ({ ok: true });
-coreBridge.getSecret = async () => null;
+coreBridge.getSecret = async (ref: string) =>
+  ref === 'eval_github_pat' ? (GITHUB_PAT ?? null) : null;
 
 const settings = {
   hotkey: 'alt+space',
