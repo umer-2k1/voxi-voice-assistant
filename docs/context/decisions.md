@@ -16,9 +16,18 @@ Running log; larger ones get an ADR in `docs/decisions/`.
 | Light theme only | Design system is "Halcyon · Light · v1.0" | Keep boilerplate dark mode | Dark infra left dormant, not removed |
 | Self-hosted fonts (@fontsource) | Desktop app must not load network fonts | Google Fonts CDN | +~300KB bundle |
 
-## Week-1 risk gate outcomes (M0)
+## Week-1 risk gate outcomes (M0, run 2026-07-06)
 
-- **Gate A — Bun vs Node:** _pending_
-- **Gate B — enigo sanity (macOS):** _pending_
-- **Gate C — global-shortcut key-release while unfocused:** _pending_
-- **Gate D — whisper-rs `small` latency:** _pending_
+- **Gate A — Bun vs Node: BOTH PASS.** `sidecar/spikes/gate-a-runtime.ts` run under Bun 1.x and Node 22/tsx: `ws` server round-trip PASS on both; `@langchain/mcp-adapters` stdio spawn of the filesystem MCP server PASS on both (14 tools listed). Since whisper + keyring moved to the Rust core, no risky native bindings remain in the sidecar. **Decision: develop runtime-agnostic, run under Node/tsx in dev; final packaging target (`bun build --compile` vs bundled Node) closes at M3 as planned.**
+- **Gate B — enigo (macOS): compiles and initializes** (spike crate built against enigo 0.6). Runtime typing test requires an interactive session with Accessibility permission — deferred to the M7 exit test on a focused editor. No API-level blockers found.
+- **Gate C — global-shortcut key-release: API CONFIRMED.** `tauri-plugin-global-shortcut` 2.3.2 exposes `ShortcutState::{Pressed, Released}` per shortcut event (re-exported from `global-hotkey`). Runtime while-unfocused verification is the M1 exit test; fallback (`rdev` or press-to-toggle) stays documented but looks unnecessary.
+- **Gate D — whisper latency (Intel Mac, CPU, 12.6s spoken utterance): MEASURED.**
+  - `small`: 25.4s inference — **fails** the ≤1.5s M2 budget on this machine (~2× real-time). Metal on this Intel Mac hung outright; whisper is CPU-only on x86_64 (Cargo target-specific features: `metal` only on aarch64-apple).
+  - `base.en`: **1.04s** inference, 181ms model load — **passes** the budget with usable accuracy.
+  - `tiny.en`: 0.55s, accuracy slightly worse.
+  - **Decision:** app default stays `small` per PRD P2; on low-end/Intel hardware the documented recommendation is `base.en` (PRD explicitly allows it), and this dev machine uses `base.en` for exit tests. whisper context is kept warm in `SttEngine`, so model load cost is paid once.
+
+## Additional findings
+
+- whisper-rs 0.15 bundles whisper.cpp's native VAD API (`whisper_vad.rs`) — candidate to replace a separate Silero crate in M2 (one less dependency; same Silero model family).
+- Node 21 breaks Vite 8/rolldown (native binding resolution) — **Node 22+ required**; nvm default switched to 22, CI uses 22.

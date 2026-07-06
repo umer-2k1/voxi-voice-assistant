@@ -2,42 +2,32 @@
 
 Upcoming work, in priority order. Mirrors `docs/tasks/todo.md`.
 
-## M0 — Foundation (in progress)
-- [x] Install Rust toolchain (rustup) and pnpm
-- [ ] Docs skeleton + tracking docs
-- [ ] Move pnpm workspace to repo root (workspace: frontend, sidecar, packages/*)
-- [ ] Tauri 2 scaffold in `src-tauri/` (main + overlay windows, tray, plugins: global-shortcut, store, opener)
-- [ ] Halcyon design tokens + fonts into `frontend/src/styles/global.css`; strip demo UI
-- [ ] CI workflow (macOS + Windows), Apache-2.0 LICENSE, CONTRIBUTING.md, issue templates
-- [ ] Risk gate A: Bun vs Node (MCP stdio spawn + ws server under Bun)
-- [ ] Risk gate B: enigo typing sanity (macOS)
-- [ ] Risk gate C: global-shortcut key-release while unfocused
-- [ ] Risk gate D: whisper-rs `small` latency on this machine
-- [ ] Push M0 to GitHub
+## Needs the user (blocking exit tests)
+- [ ] **Paste a Groq API key** (env `GROQ_API_KEY` or Settings once M8 UI lands) → unlocks S2 eval + live agent
+- [ ] **Hold ⌥Space while another app is focused** and speak → confirms M1/M2 exit tests on this machine (app runs, logs buffer + transcription)
+- [ ] Grant mic permission on first capture; grant Accessibility before M7 dictation test
 
-## M1 — Shell + hotkey + mic capture
-- [ ] hotkey.rs (press/release from settings), tray.rs, overlay window
-- [ ] cpal capture → 16kHz mono ring buffer while hotkey held
-- [ ] mic-state events → overlay pill (idle/listening)
+## M5 — GitHub MCP + PAT + Connectors tab
+- [ ] Connectors tab UI: list/add/remove/enable rows (design-system connector rows), stdio command shown verbatim before enable (PRD §9.4)
+- [ ] `test_connection` / `list_tools` proxy commands (Rust → core channel → sidecar)
+- [ ] Connector CRUD in `connectors.json` store + config push to sidecar on change
+- [ ] GitHub MCP connector (remote, PAT in keychain via `secret_ref`)
+- [ ] S3 eval case (most-starred repos)
 
-## M2 — STT
-- [ ] whisper-rs integration, model path from settings
-- [ ] Silero VAD trim (fallback: energy gate)
-- [ ] First-run model download (resumable, progress events)
+## M6 — Confirm-before-acting UI
+- [ ] Confirm card in overlay (caution-styled, tool + params, approve/deny)
+- [ ] Overlay window grows/shrinks for card; non-activating click handling (may need tauri-nspanel)
+- [ ] Deny → clean cancel note in transcript (S8)
+- [ ] S4 + S6 validation via eval harness + live
 
-## M3 — Sidecar + WS + transcript UI
-- [ ] packages/protocol zod schemas
-- [ ] Sidecar (echo agent), token auth, port handshake, respawn
-- [ ] core_client.rs (role:"core"), agent-socket.ts, session store, sidebar + Home transcript
+## M7 — Text insertion
+- [ ] Secure-input failure detection → transcript fallback (P6)
+- [ ] S5 live test in a third-party editor
 
-## M4 — Agent loop
-- [ ] LangGraph graph/tools/provider, MCP manager, open_path built-in
-- [ ] Groq key paste → keychain; transcription → user_utterance
-- [ ] Eval harness seed (S2)
-
-## M5 — GitHub connector + Connectors tab
-## M6 — Confirm-before-acting
-## M7 — Text insertion (enigo)
-## M8 — Onboarding + settings + Ollama pass
+## M8 — Onboarding + settings + Ollama + polish
+- [ ] macOS permissions onboarding (mic + Accessibility, deep-links, re-check)
+- [ ] Settings UI (hotkey recorder, provider/model toggle, STT model select, Groq key paste)
+- [ ] Ollama validation pass (S7), S1 latency measurement, S8 failure sweep
+- [ ] Re-introduce strict CSP; sidecar packaging decision (bun compile vs bundled Node); unsigned builds; README quickstart
 
 See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) for full milestone detail.

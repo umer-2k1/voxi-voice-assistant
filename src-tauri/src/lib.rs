@@ -1,4 +1,12 @@
+mod audio;
+mod commands;
+mod core_client;
+mod hotkey;
 mod session;
+mod settings;
+mod sidecar;
+mod tray;
+mod windows;
 
 /// Shared application state available to every command handler.
 pub struct AppState {
@@ -10,10 +18,12 @@ pub struct AppState {
 /// Sidecar connection info handed to the webview on request.
 /// The token is never baked into the page; the webview must ask for it.
 #[tauri::command]
-fn get_sidecar_info(state: tauri::State<'_, AppState>) -> serde_json::Value {
+fn get_sidecar_info(
+    state: tauri::State<'_, AppState>,
+    sidecar: tauri::State<'_, sidecar::Sidecar>,
+) -> serde_json::Value {
     serde_json::json!({
-        // Real port arrives with the sidecar spawn handshake in M3.
-        "port": 0,
+        "port": sidecar.port(),
         "token": state.session_token,
     })
 }
@@ -31,7 +41,33 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .manage(state)
-        .invoke_handler(tauri::generate_handler![get_sidecar_info])
+        .manage(audio::capture::AudioCapture::default())
+        .manage(audio::stt::SttEngine::default())
+        .manage(sidecar::Sidecar::default())
+        .invoke_handler(tauri::generate_handler![
+            get_sidecar_info,
+            settings::get_settings,
+            settings::update_settings,
+            audio::download::download_stt_model,
+            audio::download::check_stt_model,
+            commands::secrets::store_secret,
+            commands::secrets::delete_secret,
+            commands::secrets::has_secret,
+            commands::system::open_path,
+            commands::system::insert_text,
+        ])
+        .setup(|app| {
+            let handle = app.handle();
+            tray::build(handle)?;
+
+            let s = settings::load(handle);
+            if let Err(e) = hotkey::register(handle, &s.hotkey) {
+                log::error!("failed to register hotkey {:?}: {e}", s.hotkey);
+            }
+            windows::place_overlay(handle)?;
+            sidecar::spawn(handle);
+            Ok(())
+        })
         .on_window_event(|window, event| {
             // The app lives in the tray: closing the main window hides it.
             if window.label() == "main" {
@@ -41,6 +77,11 @@ pub fn run() {
                 }
             }
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            if let tauri::RunEvent::Exit = event {
+                sidecar::shutdown(app);
+            }
+        });
 }

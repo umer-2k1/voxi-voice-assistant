@@ -9,8 +9,8 @@ function App() {
     <RootProvider>
       <BrowserRouter>
         <Routes>
-          <Route path='/' element={<MainWindow />} />
           <Route path='/overlay' element={<OverlayWindow />} />
+          <Route path='/*' element={<MainWindow />} />
         </Routes>
       </BrowserRouter>
     </RootProvider>

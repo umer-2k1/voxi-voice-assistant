@@ -13,6 +13,9 @@ Blocked items, open issues, and items needing user input.
 - Silero VAD via `ort` vs pure-Rust fallback (`earshot`/energy gate) — decide in M2 based on build friction.
 - Filesystem MCP: `npx @modelcontextprotocol/server-filesystem` (requires Node on user machine) vs vendored server — decide in M4.
 
+## Deferred hardening
+- CSP is disabled (`null`) during prototyping for dev convenience; re-introduce a strict CSP (self + ws://127.0.0.1:<sidecar-port>) in M8.
+
 ## Accepted risks (PRD §9.5)
 - Unsigned builds (Gatekeeper/SmartScreen warnings)
 - Transcripts in memory only, unencrypted

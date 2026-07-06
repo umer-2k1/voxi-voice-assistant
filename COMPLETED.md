@@ -2,20 +2,50 @@
 
 Finished features and milestones, most recent first. Mirrors `docs/tasks/completed.md`.
 
-## 2026-07-06 — Planning
-- PRD v1.1 + Vox Design System (Halcyon Light v1.0) reviewed; 119 design tokens extracted to `docs/context/design-tokens.txt`
-- Implementation plan approved → [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)
-- Project tracking docs created
+## 2026-07-06/07 — M0–M4 (code complete; M4 live test pending Groq key)
+
+### M0 — Foundation ✅
+- Toolchains: Rust stable, pnpm 10.5.0, Node 22 (21 breaks Vite 8/rolldown), Bun (for gate), cmake
+- Docs skeleton + tracking docs; CI (macOS+Windows matrix); Apache-2.0 LICENSE; CONTRIBUTING; issue templates
+- Root pnpm workspace (frontend, sidecar, packages/protocol); husky at root
+- Tauri 2 scaffold: main + overlay windows, tray, session-token generation, Vox icon set
+- Halcyon design tokens in Tailwind v4 theme + self-hosted fonts
+- **All four week-1 risk gates run** — outcomes in `docs/context/decisions.md` (Bun/Node both pass; hotkey press/release API confirmed; enigo compiles; whisper `base.en` 1.04s ≤ budget on dev machine, `small` fails here)
+
+### M1 — Shell + tray + hotkey + mic capture ✅ (code + smoke)
+- Push-to-talk: `alt+space` press/release → cpal capture → 16kHz mono resample → buffer logged
+- Overlay pill (idle/listening/thinking) with design-system pulse + equalizer
+- App runs: tray menu, hide-to-tray, overlay bottom-center. Live keypress-while-unfocused check awaits the user.
+
+### M2 — STT + VAD + model download ✅ (code + spike-verified latency)
+- whisper-rs (Metal on Apple Silicon, CPU elsewhere), context kept warm, whisper.cpp built-in Silero VAD
+- Resumable model download with progress events; first-run banner in main window
+- Empty/garbage transcription → overlay + transcript notice (S8 seed)
+
+### M3 — Sidecar + token-auth WS + transcript UI ✅ (exit test PASSED)
+- Sidecar spawn/handshake/respawn-with-backoff, token via env, port via stdout
+- **Exit test:** wrong-token connect REJECTED; silent connect dropped; authenticated round-trip renders — verified scripted
+- Privileged core channel (config push, get_secret, system_action) working in-app
+- Main window: sidebar shell (Home/Connectors/Settings) + transcript with design-system turns
+
+### M4 — LangGraph + Groq + Filesystem MCP ✅ (code; S2 live run needs Groq key)
+- createReactAgent + MemorySaver; provider abstraction (Groq↔Ollama = settings value)
+- Built-in tools open_path / insert_text round-trip Rust core; MCP manager (stdio + http w/ PAT header)
+- Confirm gate wrapper already in place (default-deny classifier) — UI card lands in M6
+- Keychain secrets (store/delete/has + core-channel read); eval harness seeded (S2, S4 cases) + CI step
+
+## Planning (2026-07-06)
+- PRD v1.1 + design system reviewed; 119 tokens extracted; implementation plan approved
 
 ## Prototype success criteria scoreboard (PRD §1.3)
 
 | # | Criterion | Status |
 |---|---|---|
-| S1 | ≤3s end-to-end latency | ☐ |
-| S2 | "Open my Documents folder" (macOS + Windows) | ☐ |
-| S3 | Most-starred GitHub repos in transcript | ☐ |
-| S4 | File creation pauses for confirmation | ☐ |
-| S5 | Dictation inserts at cursor in third-party app | ☐ |
-| S6 | 100% side-effecting calls gated | ☐ |
-| S7 | Groq ↔ Ollama config toggle | ☐ |
-| S8 | Clean failure (deny/errors/empty STT) | ☐ |
+| S1 | ≤3s end-to-end latency | ☐ (M8) |
+| S2 | "Open my Documents folder" | ◐ code + eval ready — needs Groq key |
+| S3 | Most-starred GitHub repos | ☐ (M5) |
+| S4 | File creation pauses for confirmation | ◐ gate implemented — UI in M6 |
+| S5 | Dictation inserts at cursor | ◐ tool implemented — live test M7 |
+| S6 | 100% side-effecting calls gated | ◐ default-deny classifier in place |
+| S7 | Groq ↔ Ollama config toggle | ◐ provider abstraction done — validation M8 |
+| S8 | Clean failure | ◐ empty-STT + deny + error paths seeded |

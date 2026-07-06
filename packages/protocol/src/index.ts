@@ -84,6 +84,11 @@ export type InboundMessage = z.infer<typeof InboundMessage>;
 
 // ---------- sidecar → ui ----------
 
+export const AuthOkMessage = z.object({
+  type: z.literal('auth_ok'),
+  payload: z.object({ role: Role })
+});
+
 export const AssistantMessage = z.object({
   type: z.literal('assistant_message'),
   payload: z.object({ text: z.string() })
@@ -137,6 +142,7 @@ export const SystemActionMessage = z.object({
 });
 
 export const OutboundToUiMessage = z.discriminatedUnion('type', [
+  AuthOkMessage,
   AssistantMessage,
   ToolRunningMessage,
   ConfirmRequestMessage,

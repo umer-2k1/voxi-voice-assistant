@@ -1,2 +1,3 @@
 # Tasks — in progress
-- M0: Foundation — toolchains ✓, docs ✓, workspace restructure, Tauri scaffold, design tokens, CI, risk gates
+- M5: Connectors tab + GitHub MCP + PAT (next up)
+- Awaiting user: Groq API key; interactive hotkey/mic/Accessibility checks
