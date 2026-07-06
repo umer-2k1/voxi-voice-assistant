@@ -164,3 +164,12 @@ backend/.env
 # Build folders
 frontend/dist/
 backend/build/
+# Rust / Tauri
+src-tauri/target/
+target/
+
+# macOS
+.DS_Store
+
+# Playwright
+__tests_results__/
