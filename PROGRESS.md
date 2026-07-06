@@ -9,7 +9,9 @@ Session-by-session record of what was implemented. Newest first.
 - **M2** — whisper-rs STT with warm context, whisper.cpp built-in Silero VAD, resumable model download with progress banner.
 - **M3** — sidecar with token-auth WS (exit test PASS: bad token rejected, silent connect dropped, echo round-trip); Rust spawn/handshake/respawn; privileged core channel live (config push observed in-app); sidebar + transcript UI.
 - **M4** — LangGraph agent (createReactAgent + MemorySaver), Groq/Ollama provider abstraction, open_path/insert_text built-ins over the core channel, MCP manager, keychain secrets, confirm-gate wrapper (default-deny), eval harness + CI step.
-- **Blocked on user:** Groq API key (S2 live), interactive hotkey/mic/permission checks.
+- **M5–M8 surfaces** — connectors tab (CRUD + verbatim-command review + test/tool-list + GitHub preset), confirm card in overlay, settings view (hotkey recorder, provider toggle, STT select, Groq key paste), macOS permissions banner; Playwright smoke tests replace boilerplate demos.
+- **Live agent validation (Ollama qwen3:1.7b, local):** S2 plumbing PASS (open_path round-trip); S4/S6/S8 deny PASS (every write-ish call individually gated, deny cancels clean, sandbox untouched); S4 approve PASS (file created after explicit approval). Found + fixed: LangGraph rejects `Command({resume: false})` — resume payload is now `{approved}`.
+- **Blocked on user:** Groq API key (cloud-mode S2/S3 + evals in CI), GitHub PAT (S3), interactive checks (hold ⌥Space unfocused, mic + Accessibility grants, S5 dictation into an editor, S1 stopwatch).
 
 
 ## Session 1 — 2026-07-06
