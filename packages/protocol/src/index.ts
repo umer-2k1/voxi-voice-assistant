@@ -52,11 +52,19 @@ export const ConnectorConfig = z.object({
   transport: z.enum(['stdio', 'http']),
   command: z.string().optional(),
   args: z.array(z.string()).optional(),
+  env: z.record(z.string(), z.string()).optional(),
   url: z.string().optional(),
   enabled: z.boolean(),
   secret_ref: z.string().nullable().optional()
 });
 export type ConnectorConfig = z.infer<typeof ConnectorConfig>;
+
+/** UI → sidecar: probe a connector before enabling it (Connectors tab). */
+export const TestConnectorMessage = z.object({
+  type: z.literal('test_connector'),
+  id: z.string(),
+  payload: ConnectorConfig
+});
 
 export const Settings = z.object({
   hotkey: z.string(),
@@ -78,7 +86,8 @@ export const InboundMessage = z.discriminatedUnion('type', [
   ResumeMessage,
   SecretValueMessage,
   SystemResultMessage,
-  ConfigUpdatedMessage
+  ConfigUpdatedMessage,
+  TestConnectorMessage
 ]);
 export type InboundMessage = z.infer<typeof InboundMessage>;
 
@@ -124,6 +133,16 @@ export const DoneMessage = z.object({
   payload: z.object({ thread_id: z.string() })
 });
 
+export const ConnectorTestResultMessage = z.object({
+  type: z.literal('connector_test_result'),
+  id: z.string(),
+  payload: z.object({
+    ok: z.boolean(),
+    tools: z.array(z.string()),
+    error: z.string().optional()
+  })
+});
+
 // ---------- sidecar → core ----------
 
 export const GetSecretMessage = z.object({
@@ -148,7 +167,8 @@ export const OutboundToUiMessage = z.discriminatedUnion('type', [
   ConfirmRequestMessage,
   NeedInputMessage,
   ErrorMessage,
-  DoneMessage
+  DoneMessage,
+  ConnectorTestResultMessage
 ]);
 export type OutboundToUiMessage = z.infer<typeof OutboundToUiMessage>;
 

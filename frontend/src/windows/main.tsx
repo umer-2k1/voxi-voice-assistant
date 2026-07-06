@@ -3,9 +3,12 @@ import { useEffect } from 'react';
 import { Outlet, Route, Routes } from 'react-router-dom';
 
 import ModelBanner from '@/components/vox/model-banner';
+import PermissionsBanner from '@/components/vox/permissions-banner';
 import Sidebar from '@/components/vox/sidebar';
 import Transcript from '@/components/vox/transcript';
 import { startAgentBridge } from '@/lib/agent-socket';
+import ConnectorsView from '@/windows/connectors';
+import SettingsView from '@/windows/settings';
 
 /** Main window (route "/"): sidebar shell + Home / Connectors / Settings. */
 export default function MainWindow() {
@@ -17,21 +20,8 @@ export default function MainWindow() {
     <Routes>
       <Route element={<Shell />}>
         <Route index element={<Home />} />
-        <Route
-          path='connectors'
-          element={
-            <Placeholder title='Connectors' hint='Add and manage MCP servers — lands in M5.' />
-          }
-        />
-        <Route
-          path='settings'
-          element={
-            <Placeholder
-              title='Settings'
-              hint='Hotkey, provider and model settings — lands in M8.'
-            />
-          }
-        />
+        <Route path='connectors' element={<ConnectorsView />} />
+        <Route path='settings' element={<SettingsView />} />
       </Route>
     </Routes>
   );
@@ -51,19 +41,11 @@ function Shell() {
 function Home() {
   return (
     <>
+      <PermissionsBanner />
       <ModelBanner />
       <div className='min-h-0 flex-1'>
         <Transcript />
       </div>
     </>
-  );
-}
-
-function Placeholder({ title, hint }: Readonly<{ title: string; hint: string }>) {
-  return (
-    <div className='flex h-full flex-col items-center justify-center gap-2'>
-      <h1 className='text-ink text-[19px] font-bold tracking-[-0.01em]'>{title}</h1>
-      <p className='text-sm text-gray-500'>{hint}</p>
-    </div>
   );
 }

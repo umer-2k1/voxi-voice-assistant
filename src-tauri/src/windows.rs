@@ -1,4 +1,4 @@
-use tauri::{AppHandle, LogicalPosition, Manager};
+use tauri::{AppHandle, LogicalPosition, LogicalSize, Manager};
 
 const OVERLAY_MARGIN_BOTTOM: f64 = 24.0;
 
@@ -18,4 +18,17 @@ pub fn place_overlay(app: &AppHandle) -> tauri::Result<()> {
     }
     overlay.show()?;
     Ok(())
+}
+
+/// Resize the overlay (e.g. to fit the confirm card) and keep it anchored
+/// bottom-center. Called from the overlay webview.
+#[tauri::command]
+pub fn resize_overlay(app: AppHandle, width: f64, height: f64) -> Result<(), String> {
+    let Some(overlay) = app.get_webview_window("overlay") else {
+        return Err("overlay window missing".into());
+    };
+    overlay
+        .set_size(LogicalSize::new(width, height))
+        .map_err(|e| e.to_string())?;
+    place_overlay(&app).map_err(|e| e.to_string())
 }

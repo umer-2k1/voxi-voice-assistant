@@ -1,20 +1,39 @@
 import { useEffect, useRef, useState } from 'react';
 
+import type { PendingConfirm } from '@/stores/session';
+
+import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 
+import { sendConfirmResponse, startAgentBridge } from '@/lib/agent-socket';
 import { cn } from '@/lib/utils';
+import { useSessionStore } from '@/stores/session';
 
 type MicState = 'idle' | 'listening' | 'thinking';
 
+const OVERLAY_SIZE = { width: 380, height: 120 };
+const OVERLAY_SIZE_CONFIRM = { width: 420, height: 320 };
+
 /**
  * Overlay window (route "/overlay") — frameless, transparent, always-on-top.
- * Shows the mic pill; per the design system these are the only elements
- * that ever loop an animation. The confirm-before-acting card lands in M6.
+ * Shows the mic pill (the only looping animations in the app) and the
+ * confirm-before-acting card (P7).
  */
 export default function OverlayWindow() {
   const [state, setState] = useState<MicState>('idle');
   const [line, setLine] = useState<string | null>(null);
   const lineTimer = useRef<ReturnType<typeof setTimeout>>(null);
+  const pendingConfirm = useSessionStore((s) => s.pendingConfirm);
+
+  useEffect(() => {
+    startAgentBridge('overlay');
+  }, []);
+
+  // Grow the window for the confirm card; shrink back after.
+  useEffect(() => {
+    const size = pendingConfirm ? OVERLAY_SIZE_CONFIRM : OVERLAY_SIZE;
+    void invoke('resize_overlay', size).catch(() => undefined);
+  }, [pendingConfirm]);
 
   useEffect(() => {
     const showLine = (text: string, ms = 5000) => {
@@ -58,6 +77,7 @@ export default function OverlayWindow() {
 
   return (
     <div className='flex h-dvh flex-col items-center justify-end gap-2 bg-transparent pb-2'>
+      {pendingConfirm === null ? null : <ConfirmCard pending={pendingConfirm} />}
       {line === null ? null : (
         <div className='shadow-card max-w-[340px] truncate rounded-lg border border-gray-200 bg-white px-3 py-1.5 font-mono text-xs text-gray-700'>
           {line}
@@ -77,6 +97,42 @@ export default function OverlayWindow() {
           {state === 'listening' && 'listening'}
           {state === 'thinking' && 'thinking…'}
         </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Confirm-before-acting card (design system §8): caution-styled, shows the
+ * exact tool and parameters; nothing executes without explicit approval.
+ */
+function ConfirmCard({ pending }: Readonly<{ pending: PendingConfirm }>) {
+  return (
+    <div className='border-caution-line shadow-pop w-[400px] rounded-xl border bg-white p-4'>
+      <p className='mono-label text-caution-text'>confirm before acting</p>
+      <p className='text-ink mt-2 text-sm font-semibold'>{pending.tool}</p>
+      <pre className='bg-caution-bg border-caution-line mt-2 max-h-36 overflow-auto rounded-md border px-3 py-2 font-mono text-[11px] whitespace-pre-wrap text-gray-700'>
+        {JSON.stringify(pending.params, null, 2)}
+      </pre>
+      <div className='mt-3 flex justify-end gap-2'>
+        <button
+          type='button'
+          className='hover:bg-gray-150 rounded-md border border-gray-200 bg-white px-3.5 py-1.5 text-sm font-medium text-gray-700 transition-colors duration-120'
+          onClick={() => {
+            sendConfirmResponse(pending.id, false);
+          }}
+        >
+          Deny
+        </button>
+        <button
+          type='button'
+          className='bg-vox-500 hover:bg-vox-600 rounded-md px-3.5 py-1.5 text-sm font-medium text-white transition-colors duration-120'
+          onClick={() => {
+            sendConfirmResponse(pending.id, true);
+          }}
+        >
+          Confirm & run
+        </button>
       </div>
     </div>
   );

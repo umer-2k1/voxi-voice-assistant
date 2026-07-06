@@ -1,8 +1,18 @@
+import type { ConnectorConfig } from '@vox/protocol';
+
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { OutboundToUiMessage } from '@vox/protocol';
 
 import { useSessionStore } from '@/stores/session';
+
+export interface ConnectorTestResult {
+  ok: boolean;
+  tools: string[];
+  error?: string;
+}
+
+const pendingTests = new Map<string, (result: ConnectorTestResult) => void>();
 
 interface SidecarInfo {
   port: number | null;
@@ -14,16 +24,30 @@ let started = false;
 
 /**
  * Bridge between the Rust core, the sidecar WebSocket, and the session
- * store. Call once from the main window; survives sidecar restarts by
- * re-polling `get_sidecar_info`.
+ * store. Both windows call this; only the main window forwards
+ * transcriptions to the agent (the overlay would double-send).
+ * Survives sidecar restarts by re-polling `get_sidecar_info`.
  */
-export function startAgentBridge(): void {
+export function startAgentBridge(window: 'main' | 'overlay' = 'main'): void {
   if (started) {
     return;
   }
   started = true;
 
   void connectLoop();
+
+  void listen<string>('sidecar-status', (event) => {
+    if (event.payload === 'ready') {
+      void connectLoop();
+    }
+    if (event.payload === 'failed') {
+      useSessionStore.getState().setStatus('failed');
+    }
+  });
+
+  if (window !== 'main') {
+    return;
+  }
 
   // Rust emits the transcription of each push-to-talk utterance; the main
   // window forwards it to the agent and logs it in the transcript.
@@ -38,13 +62,9 @@ export function startAgentBridge(): void {
   void listen<{ message: string }>('stt-error', (event) => {
     useSessionStore.getState().addTurn('error', event.payload.message);
   });
-  void listen<string>('sidecar-status', (event) => {
-    if (event.payload === 'ready') {
-      void connectLoop();
-    }
-    if (event.payload === 'failed') {
-      useSessionStore.getState().setStatus('failed');
-    }
+  // e.g. enigo failing in a secure input field (P6) — surface the reason.
+  void listen<string>('system-action-error', (event) => {
+    useSessionStore.getState().addTurn('notice', event.payload);
   });
 }
 
@@ -113,7 +133,16 @@ function open(port: number, token: string): Promise<void> {
           break;
         }
         case 'confirm_request': {
-          // Confirm card lands in M6.
+          store.setPendingConfirm(message.payload);
+          store.addTurn('notice', `Waiting for confirmation: ${message.payload.tool}`);
+          break;
+        }
+        case 'connector_test_result': {
+          const resolvePending = pendingTests.get(message.id);
+          if (resolvePending) {
+            pendingTests.delete(message.id);
+            resolvePending(message.payload);
+          }
           break;
         }
       }
@@ -129,6 +158,36 @@ function open(port: number, token: string): Promise<void> {
       reject(new Error('ws error'));
     });
   });
+}
+
+/** Probe a connector via the sidecar; resolves with its tool list. */
+export function testConnector(connector: ConnectorConfig): Promise<ConnectorTestResult> {
+  if (socket?.readyState !== WebSocket.OPEN) {
+    return Promise.resolve({ ok: false, tools: [], error: 'Agent is not connected yet.' });
+  }
+  const id = crypto.randomUUID();
+  const frame = JSON.stringify({ type: 'test_connector', id, payload: connector });
+  return new Promise((resolve) => {
+    pendingTests.set(id, resolve);
+    setTimeout(() => {
+      if (pendingTests.delete(id)) {
+        resolve({ ok: false, tools: [], error: 'Connection test timed out.' });
+      }
+    }, 30_000);
+    socket?.send(frame);
+  });
+}
+
+/** Approve or deny a pending side-effecting tool call (P7). */
+export function sendConfirmResponse(id: string, approved: boolean): void {
+  const store = useSessionStore.getState();
+  store.setPendingConfirm(null);
+  if (socket?.readyState !== WebSocket.OPEN) {
+    store.addTurn('error', 'Agent is not connected — the action was not approved.');
+    return;
+  }
+  store.setBusy(true);
+  socket.send(JSON.stringify({ type: 'confirm_response', payload: { id, approved } }));
 }
 
 export function sendUtterance(text: string): void {

@@ -12,7 +12,8 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig(
   {
-    ignores: ['dist']
+    // components/ui and use-mobile are generated shadcn code — kept verbatim.
+    ignores: ['dist', 'src/components/ui', 'src/hooks/use-mobile.ts']
   },
   sonarjs.recommended,
   unicorn.configs.recommended,

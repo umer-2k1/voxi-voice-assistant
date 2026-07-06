@@ -59,6 +59,9 @@ pub fn get_settings(app: AppHandle) -> Settings {
 #[tauri::command]
 pub fn update_settings(app: AppHandle, settings: Settings) -> Result<(), String> {
     save(&app, &settings)?;
-    // Re-register the hotkey in case it changed.
-    crate::hotkey::register(&app, &settings.hotkey)
+    // Re-register the hotkey in case it changed, and let the sidecar
+    // rebuild its provider with the new settings.
+    crate::hotkey::register(&app, &settings.hotkey)?;
+    crate::core_client::push_config(&app);
+    Ok(())
 }

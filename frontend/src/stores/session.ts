@@ -9,6 +9,13 @@ export interface TranscriptTurn {
   at: number;
 }
 
+export interface PendingConfirm {
+  id: string;
+  tool: string;
+  connector: string;
+  params: Record<string, unknown>;
+}
+
 export type SidecarStatus = 'connecting' | 'ready' | 'stopped' | 'failed';
 
 interface SessionState {
@@ -16,9 +23,11 @@ interface SessionState {
   threadId: string;
   turns: TranscriptTurn[];
   busy: boolean;
-  setStatus(status: SidecarStatus): void;
-  addTurn(kind: TurnKind, text: string): void;
-  setBusy(busy: boolean): void;
+  pendingConfirm: PendingConfirm | null;
+  setStatus: (status: SidecarStatus) => void;
+  addTurn: (kind: TurnKind, text: string) => void;
+  setBusy: (busy: boolean) => void;
+  setPendingConfirm: (pending: PendingConfirm | null) => void;
 }
 
 let counter = 0;
@@ -28,6 +37,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   threadId: crypto.randomUUID(),
   turns: [],
   busy: false,
+  pendingConfirm: null,
   setStatus: (status) => {
     set({ status });
   },
@@ -38,5 +48,8 @@ export const useSessionStore = create<SessionState>((set) => ({
   },
   setBusy: (busy) => {
     set({ busy });
+  },
+  setPendingConfirm: (pendingConfirm) => {
+    set({ pendingConfirm });
   }
 }));

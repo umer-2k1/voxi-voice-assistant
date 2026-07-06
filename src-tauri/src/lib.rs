@@ -44,6 +44,7 @@ pub fn run() {
         .manage(audio::capture::AudioCapture::default())
         .manage(audio::stt::SttEngine::default())
         .manage(sidecar::Sidecar::default())
+        .manage(core_client::CoreChannel::default())
         .invoke_handler(tauri::generate_handler![
             get_sidecar_info,
             settings::get_settings,
@@ -55,6 +56,13 @@ pub fn run() {
             commands::secrets::has_secret,
             commands::system::open_path,
             commands::system::insert_text,
+            commands::connectors::list_connectors,
+            commands::connectors::add_server,
+            commands::connectors::remove_server,
+            commands::connectors::set_connector_enabled,
+            windows::resize_overlay,
+            commands::permissions::check_permissions,
+            commands::permissions::open_system_settings,
         ])
         .setup(|app| {
             let handle = app.handle();

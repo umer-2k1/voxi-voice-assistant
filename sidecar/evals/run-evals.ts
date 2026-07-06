@@ -51,7 +51,8 @@ const CASES: EvalCase[] = [
   }
 ];
 
-if (!process.env['GROQ_API_KEY']) {
+const provider = (process.env['VOX_EVAL_PROVIDER'] ?? 'groq') as 'groq' | 'ollama';
+if (provider === 'groq' && !process.env['GROQ_API_KEY']) {
   console.log('SKIPPED: GROQ_API_KEY not set — eval harness needs a live provider.');
   process.exit(0);
 }
@@ -63,8 +64,9 @@ coreBridge.getSecret = async () => null;
 
 const settings = {
   hotkey: 'alt+space',
-  llm_provider: 'groq' as const,
-  llm_model: process.env['VOX_EVAL_MODEL'] ?? 'llama-3.3-70b-versatile',
+  llm_provider: provider,
+  llm_model:
+    process.env['VOX_EVAL_MODEL'] ?? (provider === 'groq' ? 'llama-3.3-70b-versatile' : 'qwen3:1.7b'),
   stt_model: 'base.en'
 };
 

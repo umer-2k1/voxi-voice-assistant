@@ -43,6 +43,23 @@ const handle = await startServer(token, {
       case 'resume':
         void runner.utterance(message.payload.text, message.payload.thread_id, events);
         break;
+      case 'test_connector': {
+        // Connectors tab: probe the server and report its tool list.
+        const { id } = message;
+        void mcpManager
+          .listToolsFor(message.payload)
+          .then((tools) =>
+            handle.toUi({ type: 'connector_test_result', id, payload: { ok: true, tools } })
+          )
+          .catch((error: unknown) =>
+            handle.toUi({
+              type: 'connector_test_result',
+              id,
+              payload: { ok: false, tools: [], error: String(error) }
+            })
+          );
+        break;
+      }
       default:
         break;
     }
