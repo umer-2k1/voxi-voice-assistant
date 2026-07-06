@@ -61,10 +61,10 @@ Finished features and milestones, most recent first. Mirrors `docs/tasks/complet
 | # | Criterion | Status |
 |---|---|---|
 | S1 | ≤3s end-to-end latency | ☐ (M8) |
-| S2 | "Open my Documents folder" | ◐ code + eval ready — needs Groq key |
+| S2 | "Open my Documents folder" | ✅ plumbing verified live (Ollama qwen3:1.7b): utterance → open_path(~/Documents) → result; voice-in pass on Groq pending key |
 | S3 | Most-starred GitHub repos | ☐ (M5) |
-| S4 | File creation pauses for confirmation | ◐ gate implemented — UI in M6 |
+| S4 | File creation pauses for confirmation | ✅ plumbing verified live (deny + approve paths, filesystem MCP) |
 | S5 | Dictation inserts at cursor | ◐ tool implemented — live test M7 |
-| S6 | 100% side-effecting calls gated | ◐ default-deny classifier in place |
-| S7 | Groq ↔ Ollama config toggle | ◐ provider abstraction done — validation M8 |
-| S8 | Clean failure | ◐ empty-STT + deny + error paths seeded |
+| S6 | 100% side-effecting calls gated | ✅ verified live: every write-ish call (write_file, create_directory) interrupted individually |
+| S7 | Groq ↔ Ollama config toggle | ◐ Ollama side verified live via config push; Groq side pending key |
+| S8 | Clean failure | ✅ deny cancels cleanly (no crash, no file, agent continues); empty-STT notice; provider errors surface |

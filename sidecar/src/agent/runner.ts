@@ -46,7 +46,7 @@ export class AgentRunner {
       return;
     }
     this.pendingConfirms.delete(id);
-    await this.run(new Command({ resume: approved }), threadId, events);
+    await this.run(new Command({ resume: { approved } }), threadId, events);
   }
 
   private async run(input: unknown, threadId: string, events: AgentEvents): Promise<void> {

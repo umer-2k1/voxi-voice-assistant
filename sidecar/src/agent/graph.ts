@@ -35,11 +35,13 @@ export function isReadOnly(toolName: string): boolean {
 function withConfirmGate(original: StructuredToolInterface): StructuredToolInterface {
   return tool(
     async (args: Record<string, unknown>) => {
-      const approved = interrupt({
+      // Resume value is an object — LangGraph treats a bare `false`
+      // resume as an empty Command.
+      const decision = interrupt({
         tool: original.name,
         params: args
-      });
-      if (approved !== true) {
+      }) as { approved?: boolean } | undefined;
+      if (decision?.approved !== true) {
         return `The user declined "${original.name}". The action was cancelled — do not retry it.`;
       }
       return original.invoke(args);
