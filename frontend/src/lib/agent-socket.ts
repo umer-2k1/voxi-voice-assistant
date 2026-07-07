@@ -14,6 +14,16 @@ export interface ConnectorTestResult {
 
 const pendingTests = new Map<string, (result: ConnectorTestResult) => void>();
 
+export interface OAuthResult {
+  ok: boolean;
+  error?: string;
+}
+
+const pendingOAuth = new Map<string, (result: OAuthResult) => void>();
+
+/** Browser round-trips are slow; give the user six minutes to authorize. */
+const OAUTH_TIMEOUT_MS = 6 * 60 * 1000;
+
 interface SidecarInfo {
   port: number | null;
   token: string;
@@ -145,6 +155,14 @@ function open(port: number, token: string): Promise<void> {
           }
           break;
         }
+        case 'oauth_result': {
+          const resolvePending = pendingOAuth.get(message.id);
+          if (resolvePending) {
+            pendingOAuth.delete(message.id);
+            resolvePending(message.payload);
+          }
+          break;
+        }
       }
     });
     ws.addEventListener('close', () => {
@@ -174,6 +192,37 @@ export function testConnector(connector: ConnectorConfig): Promise<ConnectorTest
         resolve({ ok: false, tools: [], error: 'Connection test timed out.' });
       }
     }, 30_000);
+    socket?.send(frame);
+  });
+}
+
+/**
+ * Run the browser OAuth flow for a directory connector. The sidecar does
+ * the work (discovery, PKCE, token exchange) and stores the token set in
+ * the keychain under `secretReference` before resolving — the token never
+ * reaches this window.
+ */
+export function startOAuth(
+  serverUrl: string,
+  secretReference: string,
+  name: string
+): Promise<OAuthResult> {
+  if (socket?.readyState !== WebSocket.OPEN) {
+    return Promise.resolve({ ok: false, error: 'Agent is not connected yet.' });
+  }
+  const id = crypto.randomUUID();
+  const frame = JSON.stringify({
+    type: 'oauth_start',
+    id,
+    payload: { server_url: serverUrl, secret_ref: secretReference, name }
+  });
+  return new Promise((resolve) => {
+    pendingOAuth.set(id, resolve);
+    setTimeout(() => {
+      if (pendingOAuth.delete(id)) {
+        resolve({ ok: false, error: 'Authorization timed out.' });
+      }
+    }, OAUTH_TIMEOUT_MS);
     socket?.send(frame);
   });
 }

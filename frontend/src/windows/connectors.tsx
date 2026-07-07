@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import type { ConnectorTestResult } from '@/lib/agent-socket';
+import type { CatalogEntry } from '@/lib/connector-catalog';
 import type { ConnectorConfig } from '@vox/protocol';
 
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { testConnector } from '@/lib/agent-socket';
+import { startOAuth, testConnector } from '@/lib/agent-socket';
+import { CONNECTOR_CATALOG } from '@/lib/connector-catalog';
 import { cn } from '@/lib/utils';
 import { useConnectorsStore } from '@/stores/connectors';
 
@@ -35,13 +37,16 @@ export default function ConnectorsView() {
             MCP servers Vox can use. New servers stay off until you enable them.
           </p>
         </div>
-        <AddConnectorDialog />
+        <div className='flex gap-2'>
+          <DirectoryDialog />
+          <AddConnectorDialog />
+        </div>
       </div>
 
       {loaded && connectors.length === 0 ? (
         <div className='flex flex-1 flex-col items-center justify-center gap-1'>
           <p className='text-sm text-gray-500'>No connectors yet.</p>
-          <p className='mono-label text-gray-400'>add filesystem or github to get started</p>
+          <p className='mono-label text-gray-400'>browse the directory to get started</p>
         </div>
       ) : (
         <div className='flex flex-col gap-2'>
@@ -133,6 +138,226 @@ function formatToolList(tools: string[]): string {
   return `connected · ${tools.length} tools: ${preview}${suffix}`;
 }
 
+// ---------- Directory (click-to-connect catalog) ----------
+
+interface CardState {
+  state: 'idle' | 'token' | 'connecting' | 'added' | 'error';
+  detail?: string;
+}
+
+function DirectoryDialog() {
+  const { connectors, add, setEnabled } = useConnectorsStore();
+  const [open, setOpen] = useState(false);
+  const [cards, setCards] = useState<Record<string, CardState>>({});
+  const [tokenDraft, setTokenDraft] = useState('');
+
+  const setCard = (key: string, state: CardState['state'], detail?: string) => {
+    setCards((previous) => ({ ...previous, [key]: { state, detail } }));
+  };
+
+  const isInstalled = (entry: CatalogEntry): boolean =>
+    connectors.some((connector) =>
+      entry.url === undefined
+        ? connector.name.toLowerCase() === entry.name.toLowerCase()
+        : connector.url === entry.url
+    );
+
+  const connect = async (entry: CatalogEntry, secret?: string) => {
+    setCard(entry.key, 'connecting');
+    try {
+      const id = `${entry.key}-${Date.now().toString(36)}`;
+      const base: ConnectorConfig = {
+        id,
+        name: entry.name,
+        transport: entry.transport,
+        enabled: false,
+        ...(entry.transport === 'stdio'
+          ? { command: entry.command ?? '', args: entry.args ?? [] }
+          : { url: entry.url ?? '' })
+      };
+
+      if (entry.auth === 'oauth') {
+        // Sidecar runs the browser flow and stores the tokens in the
+        // keychain before resolving; we only ever handle the reference.
+        const secretReference = `connector_${id}`;
+        const result = await startOAuth(entry.url ?? '', secretReference, entry.name);
+        if (!result.ok) {
+          throw new Error(result.error ?? 'authorization failed');
+        }
+        await add({ ...base, secret_ref: secretReference });
+        await setEnabled(id, true);
+      } else {
+        await add(base, secret);
+        if (entry.transport === 'http') {
+          await setEnabled(id, true);
+        }
+      }
+
+      const note =
+        entry.transport === 'stdio'
+          ? 'Added — review the command in the list, then enable it.'
+          : undefined;
+      setCard(entry.key, 'added', note);
+    } catch (error) {
+      setCard(entry.key, 'error', error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>Browse directory</Button>
+      </DialogTrigger>
+      <DialogContent className='max-h-[80vh] overflow-y-auto sm:max-w-2xl'>
+        <DialogHeader>
+          <DialogTitle>Directory</DialogTitle>
+          <DialogDescription>
+            Click connect and Vox does the rest — services that need sign-in open your browser to
+            authorize. Tokens live in the OS keychain.
+          </DialogDescription>
+        </DialogHeader>
+        <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
+          {CONNECTOR_CATALOG.map((entry) => (
+            <DirectoryCard
+              key={entry.key}
+              entry={entry}
+              card={cards[entry.key] ?? { state: 'idle' }}
+              installed={isInstalled(entry)}
+              tokenDraft={tokenDraft}
+              onTokenDraft={setTokenDraft}
+              onBeginToken={() => {
+                setTokenDraft('');
+                setCard(entry.key, 'token');
+              }}
+              onCancelToken={() => {
+                setCard(entry.key, 'idle');
+              }}
+              onConnect={(secret) => void connect(entry, secret)}
+            />
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface DirectoryCardProperties {
+  entry: CatalogEntry;
+  card: CardState;
+  installed: boolean;
+  tokenDraft: string;
+  onTokenDraft: (value: string) => void;
+  onBeginToken: () => void;
+  onCancelToken: () => void;
+  onConnect: (secret?: string) => void;
+}
+
+function DirectoryCard({
+  entry,
+  card,
+  installed,
+  tokenDraft,
+  onTokenDraft,
+  onBeginToken,
+  onCancelToken,
+  onConnect
+}: Readonly<DirectoryCardProperties>) {
+  const done = installed || card.state === 'added';
+  const authBadge = describeAuth(entry.auth);
+
+  return (
+    <div className='flex flex-col gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3'>
+      <div className='flex items-center gap-3'>
+        <span className='bg-vox-50 text-vox-800 flex size-9 shrink-0 items-center justify-center rounded-md font-mono text-xs font-semibold'>
+          {entry.name.slice(0, 2).toUpperCase()}
+        </span>
+        <div className='min-w-0 flex-1'>
+          <p className='text-ink truncate text-sm font-semibold'>{entry.name}</p>
+          <p className='mono-label text-gray-400'>{authBadge}</p>
+        </div>
+        {done ? (
+          <span className='mono-label text-success shrink-0'>connected</span>
+        ) : (
+          <Button
+            size='sm'
+            variant='outline'
+            disabled={card.state === 'connecting'}
+            onClick={() => {
+              if (entry.auth === 'token') {
+                onBeginToken();
+              } else {
+                onConnect();
+              }
+            }}
+          >
+            {card.state === 'connecting' ? 'Connecting…' : 'Connect'}
+          </Button>
+        )}
+      </div>
+
+      <p className='text-xs leading-relaxed text-gray-500'>{entry.description}</p>
+
+      {card.state === 'connecting' && entry.auth === 'oauth' ? (
+        <p className='mono-label text-vox-700'>authorize in your browser, then come back…</p>
+      ) : null}
+
+      {card.state === 'token' ? (
+        <div className='flex flex-col gap-1.5'>
+          <Label htmlFor={`dir-token-${entry.key}`}>{entry.tokenLabel ?? 'Access token'}</Label>
+          <Input
+            id={`dir-token-${entry.key}`}
+            type='password'
+            value={tokenDraft}
+            placeholder={entry.tokenHint ?? 'stored in the OS keychain'}
+            onChange={(event) => {
+              onTokenDraft(event.target.value);
+            }}
+          />
+          <div className='flex gap-2'>
+            <Button
+              size='sm'
+              disabled={tokenDraft === ''}
+              onClick={() => {
+                onConnect(tokenDraft);
+              }}
+            >
+              Connect
+            </Button>
+            <Button size='sm' variant='ghost' onClick={onCancelToken}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {card.detail === undefined ? null : (
+        <p
+          className={cn(
+            'rounded-md border px-3 py-1.5 font-mono text-[11px]',
+            card.state === 'error'
+              ? 'border-danger/30 bg-danger-bg text-danger'
+              : 'border-success/30 bg-success-bg text-success'
+          )}
+        >
+          {card.detail}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function describeAuth(auth: CatalogEntry['auth']): string {
+  if (auth === 'oauth') {
+    return 'sign in with your browser';
+  }
+  if (auth === 'token') {
+    return 'needs an access token';
+  }
+  return 'no sign-in needed';
+}
+
+// ---------- Custom server form ----------
+
 type Preset = 'filesystem' | 'github' | 'custom';
 
 function AddConnectorDialog() {
@@ -188,7 +413,7 @@ function AddConnectorDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>Add server</Button>
+        <Button variant='outline'>Add custom</Button>
       </DialogTrigger>
       <DialogContent className='max-w-md'>
         <DialogHeader>

@@ -104,6 +104,23 @@ fn handle_frame(
                 .to_string(),
             );
         }
+        Some("store_secret") => {
+            // OAuth token sets from directory connect flows. Never log the value.
+            let id = value["id"].as_str().unwrap_or_default();
+            let secret_ref = value["payload"]["secret_ref"].as_str().unwrap_or_default();
+            let secret = value["payload"]["value"].as_str().unwrap_or_default();
+            let result =
+                crate::commands::secrets::store_secret(secret_ref.to_string(), secret.to_string());
+            log::info!("store_secret {secret_ref}: {}", if result.is_ok() { "ok" } else { "failed" });
+            let _ = tx.send(
+                json!({
+                    "type": "secret_stored",
+                    "id": id,
+                    "payload": { "ok": result.is_ok(), "detail": result.err() }
+                })
+                .to_string(),
+            );
+        }
         Some("system_action") => {
             let id = value["id"].as_str().unwrap_or_default().to_string();
             let action = value["payload"]["action"].as_str().unwrap_or_default().to_string();

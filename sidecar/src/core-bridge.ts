@@ -48,6 +48,15 @@ export class CoreBridge {
     return response.payload.value;
   }
 
+  /** Persist a secret (OAuth token set) in the OS keychain via the core. */
+  async storeSecret(secretRef: string, value: string): Promise<void> {
+    const response = await this.request('store_secret', { secret_ref: secretRef, value });
+    if (response.type !== 'secret_stored') throw new Error('unexpected response');
+    if (!response.payload.ok) {
+      throw new Error(response.payload.detail ?? 'keychain write failed');
+    }
+  }
+
   async systemAction(
     action: 'open_path' | 'insert_text',
     args: Record<string, unknown>

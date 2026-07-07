@@ -66,6 +66,29 @@ export const TestConnectorMessage = z.object({
   payload: ConnectorConfig
 });
 
+/**
+ * UI → sidecar: run the OAuth 2.1 authorization flow for a remote MCP
+ * server (directory click-to-connect). The sidecar discovers the
+ * authorization server, opens the browser through the core, and stores
+ * the resulting tokens in the keychain under `secret_ref`.
+ */
+export const OAuthStartMessage = z.object({
+  type: z.literal('oauth_start'),
+  id: z.string(),
+  payload: z.object({
+    server_url: z.string(),
+    secret_ref: z.string(),
+    name: z.string()
+  })
+});
+
+// core-role only: reply to the sidecar's `store_secret` request
+export const SecretStoredMessage = z.object({
+  type: z.literal('secret_stored'),
+  id: z.string(),
+  payload: z.object({ ok: z.boolean(), detail: z.string().optional() })
+});
+
 export const Settings = z.object({
   hotkey: z.string(),
   llm_provider: z.enum(['groq', 'ollama']),
@@ -86,8 +109,10 @@ export const InboundMessage = z.discriminatedUnion('type', [
   ResumeMessage,
   SecretValueMessage,
   SystemResultMessage,
+  SecretStoredMessage,
   ConfigUpdatedMessage,
-  TestConnectorMessage
+  TestConnectorMessage,
+  OAuthStartMessage
 ]);
 export type InboundMessage = z.infer<typeof InboundMessage>;
 
@@ -143,6 +168,13 @@ export const ConnectorTestResultMessage = z.object({
   })
 });
 
+/** Sidecar → UI: outcome of an `oauth_start` flow (same correlation id). */
+export const OAuthResultMessage = z.object({
+  type: z.literal('oauth_result'),
+  id: z.string(),
+  payload: z.object({ ok: z.boolean(), error: z.string().optional() })
+});
+
 // ---------- sidecar → core ----------
 
 export const GetSecretMessage = z.object({
@@ -160,6 +192,16 @@ export const SystemActionMessage = z.object({
   })
 });
 
+/**
+ * Sidecar → core: persist a secret in the OS keychain (OAuth tokens from
+ * directory connect flows). The value never touches the webview.
+ */
+export const StoreSecretMessage = z.object({
+  type: z.literal('store_secret'),
+  id: z.string(),
+  payload: z.object({ secret_ref: z.string(), value: z.string() })
+});
+
 export const OutboundToUiMessage = z.discriminatedUnion('type', [
   AuthOkMessage,
   AssistantMessage,
@@ -168,13 +210,15 @@ export const OutboundToUiMessage = z.discriminatedUnion('type', [
   NeedInputMessage,
   ErrorMessage,
   DoneMessage,
-  ConnectorTestResultMessage
+  ConnectorTestResultMessage,
+  OAuthResultMessage
 ]);
 export type OutboundToUiMessage = z.infer<typeof OutboundToUiMessage>;
 
 export const OutboundToCoreMessage = z.discriminatedUnion('type', [
   GetSecretMessage,
-  SystemActionMessage
+  SystemActionMessage,
+  StoreSecretMessage
 ]);
 export type OutboundToCoreMessage = z.infer<typeof OutboundToCoreMessage>;
 

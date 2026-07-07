@@ -9,6 +9,7 @@ import type { AgentEvents } from './agent/runner.js';
 import { AgentRunner } from './agent/runner.js';
 import { coreBridge } from './core-bridge.js';
 import { mcpManager } from './mcp/manager.js';
+import { runOAuthFlow } from './oauth.js';
 import { startServer } from './server.js';
 
 const token = process.env['VOX_SESSION_TOKEN'];
@@ -43,6 +44,21 @@ const handle = await startServer(token, {
       case 'resume':
         void runner.utterance(message.payload.text, message.payload.thread_id, events);
         break;
+      case 'oauth_start': {
+        // Directory click-to-connect: authorize in the browser, store the
+        // token set in the keychain, then tell the UI it can enable the
+        // connector. The keychain write happens before oauth_result.
+        const { id } = message;
+        console.error(`oauth: starting flow for ${message.payload.name}`);
+        void runOAuthFlow(message.payload.server_url, message.payload.secret_ref)
+          .then(() => handle.toUi({ type: 'oauth_result', id, payload: { ok: true } }))
+          .catch((error: unknown) => {
+            const detail = error instanceof Error ? error.message : String(error);
+            console.error(`oauth: ${message.payload.name} failed: ${detail}`);
+            handle.toUi({ type: 'oauth_result', id, payload: { ok: false, error: detail } });
+          });
+        break;
+      }
       case 'test_connector': {
         // Connectors tab: probe the server and report its tool list.
         const { id } = message;

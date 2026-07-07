@@ -2,7 +2,7 @@ import type { StructuredToolInterface } from '@langchain/core/tools';
 import { MultiServerMCPClient } from '@langchain/mcp-adapters';
 import type { ConnectorConfig } from '@vox/protocol';
 
-import { coreBridge } from '../core-bridge.js';
+import { resolveBearerToken } from '../oauth.js';
 
 /**
  * Manages MCP clients for the enabled connectors. Rebuilt whenever the
@@ -35,7 +35,8 @@ export class McpManager {
       } else if (connector.transport === 'http' && connector.url) {
         const headers: Record<string, string> = {};
         if (connector.secret_ref) {
-          const token = await coreBridge.getSecret(connector.secret_ref).catch(() => null);
+          // Plain PAT/API key, or an OAuth token set (refreshed when stale).
+          const token = await resolveBearerToken(connector.secret_ref).catch(() => null);
           if (token) headers['Authorization'] = `Bearer ${token}`;
         }
         mcpServers[connector.name] = { transport: 'http', url: connector.url, headers };
