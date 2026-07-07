@@ -93,7 +93,7 @@ Anything not in the directory: **Add custom** takes any stdio command or HTTP MC
 | `Cannot find native binding` / rolldown error on `pnpm dev` | You're on Node < 22. `nvm use 22`, delete `node_modules`, `pnpm install`. |
 | Hotkey does nothing | Another app may own the shortcut — pick a different one in Settings. macOS: check mic permission was granted. |
 | "No Groq API key found" in transcript | Paste a key in Settings (or `export GROQ_API_KEY=…` in dev). |
-| Ollama mode errors | Is `ollama serve` running? Is the model pulled (`ollama list`)? |
+| Ollama mode errors | Vox auto-falls back to any installed model, so usually: the Ollama app just isn't running. Settings → Reasoning shows live status and offers a one-click model download. |
 | Transcription is slow (>3s) | Switch STT model to `base.en`. Intel Macs run whisper on CPU by design (Metal hangs there). |
 | Transcription empty / "Didn't catch that" | Speak after fully pressing the hotkey; check input device volume; VAD trims pure silence. |
 | Dictation types nothing | Grant Accessibility (macOS). Secure fields (password boxes) block synthetic typing by OS design — the text falls back to the transcript. |
