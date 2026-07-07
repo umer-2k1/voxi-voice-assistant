@@ -61,6 +61,7 @@ pub fn run() {
             commands::connectors::remove_server,
             commands::connectors::set_connector_enabled,
             windows::resize_overlay,
+            windows::set_overlay_interactive,
             commands::permissions::check_permissions,
             commands::permissions::open_system_settings,
         ])

@@ -29,6 +29,10 @@ export default function OverlayWindow() {
 
   useEffect(() => {
     startAgentBridge('overlay');
+    // global.css paints body with the app background — on this window it
+    // must be see-through or the overlay renders as an opaque box.
+    document.documentElement.style.background = 'transparent';
+    document.body.style.background = 'transparent';
   }, []);
 
   const showLine = useCallback((text: string, ms = 5000) => {
@@ -53,10 +57,15 @@ export default function OverlayWindow() {
     }
   }, [turns, showLine]);
 
-  // Grow the window for the confirm card; shrink back after.
+  // Grow the window for the confirm card and accept clicks only while it
+  // is showing — otherwise the pill lets clicks fall through to whatever
+  // is underneath it.
   useEffect(() => {
     const size = pendingConfirm ? OVERLAY_SIZE_CONFIRM : OVERLAY_SIZE;
     void invoke('resize_overlay', size).catch(() => undefined);
+    void invoke('set_overlay_interactive', { interactive: pendingConfirm !== null }).catch(
+      () => undefined
+    );
   }, [pendingConfirm]);
 
   useEffect(() => {

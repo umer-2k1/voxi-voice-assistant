@@ -20,8 +20,24 @@ pub fn place_overlay(app: &AppHandle) -> tauri::Result<()> {
     // without ever focusing the main window (belt-and-braces with the
     // `visibleOnAllWorkspaces` window config).
     overlay.set_visible_on_all_workspaces(true)?;
+    // The pill is display-only — let clicks fall through to whatever is
+    // underneath. The webview re-enables input for the confirm card.
+    overlay.set_ignore_cursor_events(true)?;
     overlay.show()?;
     Ok(())
+}
+
+/// Toggle whether the overlay accepts mouse input. Off by default (the
+/// pill is display-only); the webview turns it on while the confirm card
+/// is showing so Confirm/Deny are clickable.
+#[tauri::command]
+pub fn set_overlay_interactive(app: AppHandle, interactive: bool) -> Result<(), String> {
+    let Some(overlay) = app.get_webview_window("overlay") else {
+        return Err("overlay window missing".into());
+    };
+    overlay
+        .set_ignore_cursor_events(!interactive)
+        .map_err(|e| e.to_string())
 }
 
 /// Resize the overlay (e.g. to fit the confirm card) and keep it anchored
