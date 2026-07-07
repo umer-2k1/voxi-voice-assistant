@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { PendingConfirm } from '@/stores/session';
 
@@ -24,10 +24,34 @@ export default function OverlayWindow() {
   const [line, setLine] = useState<string | null>(null);
   const lineTimer = useRef<ReturnType<typeof setTimeout>>(null);
   const pendingConfirm = useSessionStore((s) => s.pendingConfirm);
+  const busy = useSessionStore((s) => s.busy);
+  const turns = useSessionStore((s) => s.turns);
 
   useEffect(() => {
     startAgentBridge('overlay');
   }, []);
+
+  const showLine = useCallback((text: string, ms = 5000) => {
+    if (lineTimer.current) {
+      clearTimeout(lineTimer.current);
+    }
+    setLine(text);
+    lineTimer.current = setTimeout(() => {
+      setLine(null);
+    }, ms);
+  }, []);
+
+  // Surface agent replies in the overlay so Vox is fully usable while
+  // another app has focus — no need to switch to the main window.
+  useEffect(() => {
+    const last = turns.at(-1);
+    if (!last) {
+      return;
+    }
+    if (last.kind === 'assistant' || last.kind === 'notice' || last.kind === 'error') {
+      showLine(last.text, 9000);
+    }
+  }, [turns, showLine]);
 
   // Grow the window for the confirm card; shrink back after.
   useEffect(() => {
@@ -36,16 +60,6 @@ export default function OverlayWindow() {
   }, [pendingConfirm]);
 
   useEffect(() => {
-    const showLine = (text: string, ms = 5000) => {
-      if (lineTimer.current) {
-        clearTimeout(lineTimer.current);
-      }
-      setLine(text);
-      lineTimer.current = setTimeout(() => {
-        setLine(null);
-      }, ms);
-    };
-
     const subs = [
       listen<MicState>('mic-state', (event) => {
         setState(event.payload);
@@ -73,7 +87,11 @@ export default function OverlayWindow() {
         clearTimeout(lineTimer.current);
       }
     };
-  }, []);
+  }, [showLine]);
+
+  // The mic pipeline drives listening/thinking; while the agent itself is
+  // working the session store's busy flag keeps the pill on "thinking…".
+  const displayState: MicState = busy && state === 'idle' ? 'thinking' : state;
 
   return (
     <div className='flex h-dvh flex-col items-center justify-end gap-2 bg-transparent pb-2'>
@@ -86,16 +104,18 @@ export default function OverlayWindow() {
       <div
         className={cn(
           'flex items-center gap-2.5 rounded-full border bg-white py-2 pr-4 pl-3',
-          state === 'listening'
+          displayState === 'listening'
             ? 'border-vox-300 animate-listening-pulse shadow-glow'
             : 'shadow-card border-gray-200'
         )}
       >
-        {state === 'listening' ? <Equalizer /> : <StatusDot state={state} />}
-        <span className={cn('mono-label', state === 'idle' ? 'text-gray-400' : 'text-gray-700')}>
-          {state === 'idle' && 'idle'}
-          {state === 'listening' && 'listening'}
-          {state === 'thinking' && 'thinking…'}
+        {displayState === 'listening' ? <Equalizer /> : <StatusDot state={displayState} />}
+        <span
+          className={cn('mono-label', displayState === 'idle' ? 'text-gray-400' : 'text-gray-700')}
+        >
+          {displayState === 'idle' && 'idle'}
+          {displayState === 'listening' && 'listening'}
+          {displayState === 'thinking' && 'thinking…'}
         </span>
       </div>
     </div>

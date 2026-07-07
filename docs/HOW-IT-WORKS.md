@@ -52,13 +52,16 @@ What happens when you hold ⌥Space and say *"Create a markdown file called meet
 All three processes meet on one WebSocket server owned by the sidecar, bound to `127.0.0.1` on an OS-assigned port. Two client roles (schemas live in [`packages/protocol`](../packages/protocol/src/index.ts)):
 
 **`ui` role (webview windows):**
-- in: `user_utterance`, `confirm_response {id, approved}`, `resume`, `test_connector`
-- out: `assistant_message`, `tool_running`, `confirm_request {tool, params}`, `need_input`, `error`, `done`, `connector_test_result`
+- in: `user_utterance`, `confirm_response {id, approved}`, `resume`, `test_connector`, `oauth_start` (directory click-to-connect)
+- out: `assistant_message`, `tool_running`, `confirm_request {tool, params}`, `need_input`, `error`, `done`, `connector_test_result`, `oauth_result`
 
 **`core` role (Rust, privileged):**
 - `config_updated` — Rust pushes connectors + settings at spawn and on every change; the sidecar rebuilds its MCP clients and provider from it
-- `get_secret {secret_ref}` → `secret_value` — the only path secrets travel (see below)
+- `get_secret {secret_ref}` → `secret_value` — the only read path for secrets (see below)
+- `store_secret {secret_ref, value}` → `secret_stored` — how OAuth token sets from directory connects reach the keychain
 - `system_action {open_path | insert_text}` → `system_result` — how agent tools reach the OS
+
+For directory connectors that need sign-in, the sidecar runs a full OAuth 2.1 flow itself (authorization-server discovery, dynamic client registration, PKCE, a one-shot callback server on 127.0.0.1) and refreshes expired tokens automatically — the webview only ever sees the secret *reference*.
 
 Separately, the webview calls Rust directly via Tauri IPC commands for everything config-shaped: `get_settings`/`update_settings`, connector CRUD, `store_secret`/`delete_secret`, `check_permissions`, `download_stt_model`, `get_sidecar_info`.
 

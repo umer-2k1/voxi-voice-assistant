@@ -16,6 +16,10 @@ pub fn place_overlay(app: &AppHandle) -> tauri::Result<()> {
             screen.height - win.height - OVERLAY_MARGIN_BOTTOM,
         ))?;
     }
+    // Follow the user to every Space / fullscreen app so Vox is usable
+    // without ever focusing the main window (belt-and-braces with the
+    // `visibleOnAllWorkspaces` window config).
+    overlay.set_visible_on_all_workspaces(true)?;
     overlay.show()?;
     Ok(())
 }

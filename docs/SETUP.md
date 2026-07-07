@@ -12,7 +12,7 @@ Everything needed to go from a fresh clone to a working voice agent, for both de
 | **pnpm** | ≥ 10 | workspace package manager | `npm install -g pnpm@10.5.0` |
 | **Rust** | stable | Tauri core (hotkey, mic, STT, keychain) | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
 | **Xcode CLT** (macOS) | any recent | compiles the Rust core + whisper.cpp | `xcode-select --install` |
-| **MSVC Build Tools + WebView2** (Windows) | VS 2022 | same | [Tauri Windows prerequisites](https://v2.tauri.app/start/prerequisites/) |
+| **MSVC Build Tooeels + WebView2** (Windows) | VS 2022 | same | [Tauri Windows prerequisites](https://v2.tauri.app/start/prerequisites/) |
 | **cmake** | any recent | builds whisper.cpp via whisper-rs | `brew install cmake` (macOS) |
 
 **For the agent's brain — pick one (or both):**
@@ -69,13 +69,14 @@ Settings are stored as plain JSON in `…/dev.vox.app/settings.json` — hand-ed
 
 ## 5. Add connectors (optional but recommended)
 
-Open **Connectors → Add server**:
+Open **Connectors → Browse directory** and click **Connect** on any card:
 
-- **filesystem** preset — runs `npx -y @modelcontextprotocol/server-filesystem ~/` locally over stdio. The exact command is shown verbatim before you enable it; nothing runs until you click **Enable** (deliberate security posture — no auto-start of stdio servers).
-- **github** preset — GitHub's hosted MCP server (`https://api.githubcopilot.com/mcp/`). Paste a PAT; it goes into the OS keychain and is attached as a bearer header.
-- **custom** — any stdio command or HTTP MCP endpoint + optional token.
+- **No sign-in needed** (Context7, DeepWiki…) — connects instantly.
+- **Access token** (GitHub, Stripe, Hugging Face…) — paste one credential; it goes into the OS keychain and is attached as a bearer header.
+- **Sign in with your browser** (Notion, Linear, Sentry, Atlassian, Asana, Canva, Figma…) — Vox opens your browser to authorize; approve, come back, and the connector is live. Tokens are stored in the keychain and refreshed automatically.
+- **Filesystem** runs locally over stdio — it is added disabled, and the exact command (`npx -y @modelcontextprotocol/server-filesystem ~/`) is shown verbatim before you enable it (deliberate security posture — no auto-start of stdio servers).
 
-Use **Test** on any row to verify the connection and list the tools it exposes.
+Anything not in the directory: **Add custom** takes any stdio command or HTTP MCP endpoint + optional token. Use **Test** on any row to verify the connection and list the tools it exposes.
 
 ## 6. Use it
 
