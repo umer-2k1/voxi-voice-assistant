@@ -3,6 +3,7 @@ import { ChatOllama } from '@langchain/ollama';
 import type { Settings } from '@vox/protocol';
 
 import { coreBridge } from '../core-bridge.js';
+import { resolveOllamaModel } from './ollama.js';
 
 /** Well-known keychain reference for the Groq API key (PRD §8.3). */
 export const GROQ_KEY_REF = 'groq_api_key';
@@ -15,7 +16,9 @@ export type ChatModel = ChatGroq | ChatOllama;
  */
 export async function buildModel(settings: Settings): Promise<ChatModel> {
   if (settings.llm_provider === 'ollama') {
-    return new ChatOllama({ model: settings.llm_model, temperature: 0 });
+    // Self-healing: fall back to an installed model rather than erroring.
+    const model = await resolveOllamaModel(settings.llm_model);
+    return new ChatOllama({ model, temperature: 0 });
   }
 
   // Dev convenience first, keychain second.
