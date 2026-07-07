@@ -4,6 +4,8 @@ Open-source, local-first voice agent for desktop (macOS + Windows). Hold a hotke
 
 > **Status: prototype in active development.** See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) for the roadmap (M0–M8), [PROGRESS.md](PROGRESS.md) for the latest state, and [PRD-v1.1-prototype.md](PRD-v1.1-prototype.md) for full product scope.
 
+**📖 New here? Start with the [Complete Setup Guide](docs/SETUP.md) and [How Vox Works](docs/HOW-IT-WORKS.md).**
+
 ## How it works
 
 Hold hotkey → speak → **whisper.cpp** transcribes locally → **LangGraph** agent plans → calls an **MCP connector** (Filesystem, GitHub) or a system action → **confirm-before-acting** gate for side effects → result in the transcript, or text inserted at your cursor.
@@ -25,6 +27,8 @@ Hold hotkey → speak → **whisper.cpp** transcribes locally → **LangGraph** 
 pnpm install
 pnpm dev        # tauri dev — starts Vite + the Rust core
 ```
+
+Full walkthrough (permissions, keys, connectors, troubleshooting): [docs/SETUP.md](docs/SETUP.md).
 
 Repo layout: `frontend/` (React webview) · `src-tauri/` (Rust core: hotkey, mic, STT, keychain) · `sidecar/` (TypeScript agent: LangGraph + MCP) · `packages/protocol/` (shared WS schemas) · `docs/` (living docs).
 
