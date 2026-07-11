@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { Home, Plug, Settings } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
@@ -59,6 +60,15 @@ export default function Sidebar() {
         <span className='mono-label text-gray-400'>
           {status === 'ready' ? 'agent online' : `agent ${status}`}
         </span>
+        {status === 'stopped' || status === 'failed' ? (
+          <button
+            type='button'
+            className='mono-label text-vox-700 ml-auto underline'
+            onClick={() => void invoke('restart_sidecar')}
+          >
+            restart
+          </button>
+        ) : null}
       </div>
     </aside>
   );

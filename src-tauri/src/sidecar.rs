@@ -162,3 +162,23 @@ pub fn shutdown(app: &AppHandle) {
         let _ = child.wait();
     }
 }
+
+/// Explicit user restart: clears the respawn budget so a sidecar that
+/// exhausted its 5 automatic attempts can come back without relaunching
+/// the app. Killing a live child lets its watcher thread respawn it;
+/// with no child (gave up earlier) we spawn fresh.
+#[tauri::command]
+pub fn restart_sidecar(app: AppHandle) {
+    let state = app.state::<Sidecar>();
+    state.shutting_down.store(false, Ordering::SeqCst);
+    *state.respawns.lock().unwrap() = 0;
+    let taken = state.child.lock().unwrap().take();
+    match taken {
+        Some(mut child) => {
+            log::info!("restarting sidecar on user request");
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+        None => spawn(&app),
+    }
+}

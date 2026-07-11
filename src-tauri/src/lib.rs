@@ -30,13 +30,33 @@ fn get_sidecar_info(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    env_logger::init();
+    // Panics land in the log file too, with the default stderr report kept.
+    let default_panic = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        log::error!("panic: {info}");
+        default_panic(info);
+    }));
 
     let state = AppState {
         session_token: session::generate_token(),
     };
 
     tauri::Builder::default()
+        .plugin(
+            // Rotating file log (app log dir) + stderr; sidecar stderr is
+            // forwarded through `log` so it lands here as well.
+            tauri_plugin_log::Builder::new()
+                .targets([
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stderr),
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
+                        file_name: Some("vox".into()),
+                    }),
+                ])
+                .level(log::LevelFilter::Info)
+                .max_file_size(2_000_000)
+                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepOne)
+                .build(),
+        )
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
@@ -67,6 +87,7 @@ pub fn run() {
             commands::permissions::request_microphone,
             commands::permissions::request_accessibility,
             commands::permissions::open_system_settings,
+            sidecar::restart_sidecar,
         ])
         .setup(|app| {
             let handle = app.handle();
