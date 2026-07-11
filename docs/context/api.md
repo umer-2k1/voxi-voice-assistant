@@ -43,7 +43,7 @@ Sidecar binds `127.0.0.1:0`, prints `{"port": N}` on stdout. All messages are JS
 - Settings: `get_settings`, `update_settings`
 - Secrets: `store_secret`, `delete_secret`, `has_secret` — **no `get_secret` exposed to webview**
 - System: `open_path`, `insert_text`
-- Permissions (macOS): `check_permissions`, `open_system_settings`
+- Permissions (macOS): `check_permissions` (mic TCC state + Accessibility), `request_microphone` (fires the TCC prompt via a brief capture), `request_accessibility` (AX consent prompt), `open_system_settings` (accessibility | microphone | notifications). Notification permission/sending goes through `tauri-plugin-notification` from the webview.
 - Sidecar: `get_sidecar_info` → `{port, token}`
 - STT: `download_stt_model`
 

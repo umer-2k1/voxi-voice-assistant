@@ -4,7 +4,11 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { OutboundToUiMessage } from '@vox/protocol';
 
+import { notifyIfUnfocused } from '@/lib/notify';
 import { useSessionStore } from '@/stores/session';
+
+/** Only the main window raises system notifications (overlay would double-send). */
+let notifyingWindow = false;
 
 export interface ConnectorTestResult {
   ok: boolean;
@@ -43,6 +47,7 @@ export function startAgentBridge(window: 'main' | 'overlay' = 'main'): void {
     return;
   }
   started = true;
+  notifyingWindow = window === 'main';
 
   void connectLoop();
 
@@ -131,6 +136,9 @@ function open(port: number, token: string): Promise<void> {
         case 'need_input': {
           store.addTurn('notice', message.payload.question);
           store.setBusy(false);
+          if (notifyingWindow) {
+            void notifyIfUnfocused('Vox has a question', message.payload.question);
+          }
           break;
         }
         case 'error': {
@@ -145,6 +153,12 @@ function open(port: number, token: string): Promise<void> {
         case 'confirm_request': {
           store.setPendingConfirm(message.payload);
           store.addTurn('notice', `Waiting for confirmation: ${message.payload.tool}`);
+          if (notifyingWindow) {
+            void notifyIfUnfocused(
+              'Vox needs your approval',
+              `${message.payload.connector} · ${message.payload.tool} is waiting for a decision.`
+            );
+          }
           break;
         }
         case 'connector_test_result': {

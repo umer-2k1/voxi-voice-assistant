@@ -1,33 +1,34 @@
 import { useEffect, useState } from 'react';
 
+import type { PermissionsState } from '@/lib/permissions';
+
 import { invoke } from '@tauri-apps/api/core';
 
 import { Button } from '@/components/ui/button';
-
-interface Permissions {
-  accessibility: boolean;
-  microphone_device: boolean;
-}
+import { checkAllPermissions } from '@/lib/permissions';
 
 const IS_MAC = navigator.userAgent.includes('Mac');
 
 /**
- * First-run permissions onboarding (P9, macOS only): check state,
- * deep-link to System Settings, re-check. Windows renders nothing.
+ * Post-onboarding safety net (P9): if a required permission was skipped
+ * or later revoked, surface it above the transcript with a one-click
+ * path to fix it. Renders nothing when everything is granted.
  */
 export default function PermissionsBanner() {
-  const [permissions, setPermissions] = useState<Permissions | null>(null);
+  const [permissions, setPermissions] = useState<PermissionsState | null>(null);
 
   const check = () => {
-    void invoke<Permissions>('check_permissions').then(setPermissions);
+    void checkAllPermissions().then(setPermissions);
   };
 
   useEffect(check, []);
 
-  if (!IS_MAC || permissions === null) {
+  if (permissions === null) {
     return null;
   }
-  if (permissions.accessibility && permissions.microphone_device) {
+  const microphoneOk = permissions.microphone === 'granted' && permissions.microphone_device;
+  const accessibilityOk = !IS_MAC || permissions.accessibility;
+  if (microphoneOk && accessibilityOk) {
     return null;
   }
 
@@ -37,7 +38,23 @@ export default function PermissionsBanner() {
       {permissions.microphone_device ? null : (
         <p className='text-sm text-gray-700'>No microphone found — connect or enable one.</p>
       )}
-      {permissions.accessibility ? null : (
+      {permissions.microphone === 'denied' ? (
+        <div className='flex items-center justify-between gap-3'>
+          <p className='text-sm text-gray-700'>
+            Microphone access is off — Vox cannot hear commands until it is allowed.
+          </p>
+          <Button
+            size='sm'
+            variant='outline'
+            onClick={() => {
+              void invoke('open_system_settings', { pane: 'microphone' });
+            }}
+          >
+            Open System Settings
+          </Button>
+        </div>
+      ) : null}
+      {accessibilityOk ? null : (
         <div className='flex items-center justify-between gap-3'>
           <p className='text-sm text-gray-700'>
             Accessibility permission lets Vox type dictated text into other apps.
@@ -46,10 +63,10 @@ export default function PermissionsBanner() {
             size='sm'
             variant='outline'
             onClick={() => {
-              void invoke('open_system_settings', { pane: 'accessibility' });
+              void invoke('request_accessibility');
             }}
           >
-            Open System Settings
+            Grant Accessibility
           </Button>
         </div>
       )}

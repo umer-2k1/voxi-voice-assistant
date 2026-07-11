@@ -53,7 +53,14 @@ export default function OverlayWindow() {
       return;
     }
     if (last.kind === 'assistant' || last.kind === 'notice' || last.kind === 'error') {
-      showLine(last.text, 9000);
+      // Deferred a frame: keeps the store-driven render and the transient
+      // line update in separate passes (react-x/set-state-in-effect).
+      const frame = requestAnimationFrame(() => {
+        showLine(last.text, 9000);
+      });
+      return () => {
+        cancelAnimationFrame(frame);
+      };
     }
   }, [turns, showLine]);
 

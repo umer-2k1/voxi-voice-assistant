@@ -40,6 +40,7 @@ pub fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(state)
         .manage(audio::capture::AudioCapture::default())
         .manage(audio::stt::SttEngine::default())
@@ -63,6 +64,8 @@ pub fn run() {
             windows::resize_overlay,
             windows::set_overlay_interactive,
             commands::permissions::check_permissions,
+            commands::permissions::request_microphone,
+            commands::permissions::request_accessibility,
             commands::permissions::open_system_settings,
         ])
         .setup(|app| {
