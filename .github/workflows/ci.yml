@@ -22,11 +22,30 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
-      - run: pnpm --filter @vox/frontend lint
+      - run: pnpm -r lint
+      - run: pnpm --filter @vox/protocol test
       - name: Agent evals (skips without GROQ_API_KEY secret)
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: pnpm --filter @vox/sidecar eval
+
+  e2e:
+    name: Playwright smoke (web shell)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @vox/frontend exec playwright install --with-deps chromium
+      - name: Run shell smoke tests
+        env:
+          HOST: localhost
+          PORT: '3000'
+        run: pnpm --filter @vox/frontend exec playwright test --project=chromium
 
   desktop:
     name: Tauri build (${{ matrix.os }})

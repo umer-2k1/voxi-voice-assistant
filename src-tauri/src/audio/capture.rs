@@ -29,8 +29,7 @@ struct ActiveCapture {
 pub enum MicState {
     Idle,
     Listening,
-    /// Set while STT/agent work runs (M2+).
-    #[allow(dead_code)]
+    /// Set while STT/agent work runs.
     Thinking,
 }
 

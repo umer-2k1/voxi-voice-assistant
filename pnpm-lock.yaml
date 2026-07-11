@@ -26,9 +26,6 @@ importers:
       '@fontsource/ibm-plex-mono':
         specifier: ^5.2.7
         version: 5.2.7
-      '@t3-oss/env-core':
-        specifier: 0.13.11
-        version: 0.13.11(typescript@6.0.3)(zod@4.3.6)
       '@tabler/icons-react':
         specifier: 3.41.1
         version: 3.41.1(react@19.2.5)
@@ -2087,23 +2084,6 @@ packages:
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
-
-  '@t3-oss/env-core@0.13.11':
-    resolution: {integrity: sha512-sM7GYY+KL7H/Hl0BE0inWfk3nRHZOLhmVn7sHGxaZt9FAR6KqREXAE+6TqKfiavfXmpRxO/OZ2QgKRd+oiBYRQ==}
-    peerDependencies:
-      arktype: ^2.1.0
-      typescript: '>=5.0.0'
-      valibot: ^1.0.0-beta.7 || ^1.0.0
-      zod: ^3.24.0 || ^4.0.0
-    peerDependenciesMeta:
-      arktype:
-        optional: true
-      typescript:
-        optional: true
-      valibot:
-        optional: true
-      zod:
-        optional: true
 
   '@tabler/icons-react@3.41.1':
     resolution: {integrity: sha512-kUgweE+DJtAlMZVIns1FTDdcbpRVnkK7ZpUOXmoxy3JAF0rSHj0TcP4VHF14+gMJGnF+psH2Zt26BLT6owetBA==}
@@ -7335,11 +7315,6 @@ snapshots:
   '@sindresorhus/merge-streams@4.0.0': {}
 
   '@standard-schema/spec@1.1.0': {}
-
-  '@t3-oss/env-core@0.13.11(typescript@6.0.3)(zod@4.3.6)':
-    optionalDependencies:
-      typescript: 6.0.3
-      zod: 4.3.6
 
   '@tabler/icons-react@3.41.1(react@19.2.5)':
     dependencies:
