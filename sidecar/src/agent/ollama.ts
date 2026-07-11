@@ -39,7 +39,12 @@ const TOOL_CAPABLE = [
   /^gpt-oss/i
 ];
 
-/** Pick the model to actually run given what the user configured. */
+/**
+ * Pick the model to actually run given what the user configured.
+ * Floor: never fall back to a model outside the tool-capable list — an
+ * agent on a non-tool model fails confusingly on its very first call,
+ * which is worse than an actionable error.
+ */
 export function pickModel(configured: string, installed: string[]): string | null {
   if (installed.length === 0) return null;
   if (installed.includes(configured)) return configured;
@@ -53,7 +58,7 @@ export function pickModel(configured: string, installed: string[]): string | nul
     const match = installed.find((name) => pattern.test(name));
     if (match) return match;
   }
-  return installed[0] ?? null;
+  return null;
 }
 
 /**
@@ -69,8 +74,11 @@ export async function resolveOllamaModel(configured: string): Promise<string> {
   }
   const model = pickModel(configured, status.models);
   if (!model) {
+    const installed = status.models.length === 0 ? 'none' : status.models.join(', ');
     throw new Error(
-      'Ollama is running but has no models installed. Open Settings → Reasoning to download one, or run `ollama pull qwen3:8b`.'
+      `No installed Ollama model can drive the agent (installed: ${installed}). ` +
+        'Tool calling needs e.g. qwen3, hermes3, or llama3.x — run `ollama pull qwen3:8b` ' +
+        '(or `qwen3:4b` on modest hardware), or switch to Groq in Settings.'
     );
   }
   if (model !== configured) {
