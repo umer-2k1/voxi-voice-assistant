@@ -3,6 +3,10 @@
  *
  * - `oauth` entries authorize in the browser via the sidecar's OAuth 2.1
  *   client (dynamic registration + PKCE); no manual keys.
+ * - `oauth-preset` entries authorize in the browser against fixed
+ *   endpoints with a user-created OAuth client (providers without
+ *   dynamic registration, e.g. Google). Entries sharing a provider share
+ *   one token set (`sharedSecretRef`) — one consent covers them all.
  * - `token` entries ask for one paste-able credential, stored in the
  *   OS keychain.
  * - `none` entries connect straight away.
@@ -10,7 +14,7 @@
  * Remote URLs are the providers' official hosted MCP endpoints.
  */
 
-export type CatalogAuth = 'none' | 'token' | 'oauth';
+export type CatalogAuth = 'none' | 'token' | 'oauth' | 'oauth-preset';
 
 export interface CatalogEntry {
   key: string;
@@ -25,9 +29,87 @@ export interface CatalogEntry {
   tokenLabel?: string;
   /** Where to create the credential. */
   tokenHint?: string;
+  /** Entries sharing a provider share one OAuth token set. */
+  provider?: 'google';
+  /** Fixed keychain ref shared across the provider (instead of connector_<id>). */
+  sharedSecretRef?: string;
+  /** OAuth details for servers without dynamic registration (auth === 'oauth-preset'). */
+  oauthPreset?: {
+    authorizationEndpoint: string;
+    tokenEndpoint: string;
+    scopes: string[];
+    extraAuthParams?: Record<string, string>;
+    /** Console page where the user creates the OAuth client. */
+    setupUrl?: string;
+  };
+}
+
+export const GOOGLE_SECRET_REF = 'google_oauth';
+
+/**
+ * Union of the scopes every Google connector needs. Consent is one-shot
+ * (shared token set), so the first Google connect asks for all of them.
+ */
+export const GOOGLE_SCOPES = [
+  'https://www.googleapis.com/auth/gmail.readonly',
+  'https://www.googleapis.com/auth/gmail.compose',
+  'https://www.googleapis.com/auth/drive.readonly',
+  'https://www.googleapis.com/auth/drive.file',
+  'https://www.googleapis.com/auth/calendar.calendarlist.readonly',
+  'https://www.googleapis.com/auth/calendar.events.freebusy',
+  'https://www.googleapis.com/auth/calendar.events.readonly',
+  'https://www.googleapis.com/auth/chat.messages.readonly',
+  'https://www.googleapis.com/auth/chat.spaces.readonly'
+];
+
+const GOOGLE_PRESET: NonNullable<CatalogEntry['oauthPreset']> = {
+  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+  tokenEndpoint: 'https://oauth2.googleapis.com/token',
+  scopes: GOOGLE_SCOPES,
+  // offline + consent guarantees a refresh token on every authorization.
+  extraAuthParams: { access_type: 'offline', prompt: 'consent' },
+  setupUrl: 'https://console.cloud.google.com/apis/credentials'
+};
+
+function googleEntry(key: string, name: string, description: string, url: string): CatalogEntry {
+  return {
+    key,
+    name,
+    description,
+    auth: 'oauth-preset',
+    transport: 'http',
+    url,
+    provider: 'google',
+    sharedSecretRef: GOOGLE_SECRET_REF,
+    oauthPreset: GOOGLE_PRESET
+  };
 }
 
 export const CONNECTOR_CATALOG: CatalogEntry[] = [
+  googleEntry(
+    'google-gmail',
+    'Gmail',
+    'Read, search, and draft email in your Gmail account',
+    'https://gmailmcp.googleapis.com/mcp/v1'
+  ),
+  googleEntry(
+    'google-drive',
+    'Google Drive',
+    'Search and read files in your Google Drive',
+    'https://drivemcp.googleapis.com/mcp/v1'
+  ),
+  googleEntry(
+    'google-calendar',
+    'Google Calendar',
+    'Look up calendars, events, and free/busy times',
+    'https://calendarmcp.googleapis.com/mcp/v1'
+  ),
+  googleEntry(
+    'google-chat',
+    'Google Chat',
+    'Read spaces and messages in Google Chat',
+    'https://chatmcp.googleapis.com/mcp/v1'
+  ),
   {
     key: 'filesystem',
     name: 'Filesystem',

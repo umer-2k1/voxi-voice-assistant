@@ -1,17 +1,25 @@
 import { createHash, randomBytes } from 'node:crypto';
 import http from 'node:http';
 
+import type { OAuthPreset } from '@vox/protocol';
+
 import { coreBridge } from './core-bridge.js';
 
 /**
  * OAuth 2.1 client for remote MCP servers (directory click-to-connect).
  *
- * Flow (MCP authorization spec): discover the authorization server via
- * RFC 9728 protected-resource metadata, dynamically register a client
- * (RFC 7591), send the user to the browser with PKCE, catch the redirect
- * on a 127.0.0.1 loopback server, exchange the code, and persist the
- * token set in the OS keychain through the core channel. The webview
- * never sees a token.
+ * Default flow (MCP authorization spec): discover the authorization
+ * server via RFC 9728 protected-resource metadata, dynamically register
+ * a client (RFC 7591), send the user to the browser with PKCE, catch the
+ * redirect on a 127.0.0.1 loopback server, exchange the code, and
+ * persist the token set in the OS keychain through the core channel.
+ * The webview never sees a token.
+ *
+ * Preset flow: servers without dynamic registration (Google) supply
+ * fixed endpoints, a user-created client, and explicit scopes via
+ * `OAuthPreset`; discovery and registration are skipped. The `resource`
+ * indicator (RFC 8707) is only sent on the discovery flow — preset
+ * authorization servers are not resource-indicator aware.
  */
 
 const FLOW_TIMEOUT_MS = 5 * 60 * 1000;
@@ -109,6 +117,45 @@ async function registerClient(
   return { clientId: registered.client_id, clientSecret: registered.client_secret };
 }
 
+/**
+ * Client credentials for a preset flow: from the preset itself, or —
+ * on re-auth, when the UI cannot read secrets — reused from the token
+ * set already stored in the keychain.
+ */
+async function resolvePresetClient(
+  preset: OAuthPreset,
+  secretRef: string
+): Promise<{ clientId: string; clientSecret?: string }> {
+  if (preset.client_id) {
+    return { clientId: preset.client_id, clientSecret: preset.client_secret };
+  }
+  const raw = await coreBridge.getSecret(secretRef).catch(() => null);
+  if (raw?.trimStart().startsWith('{')) {
+    try {
+      const stored = JSON.parse(raw) as OAuthTokenSet;
+      if (stored.client_id) {
+        return { clientId: stored.client_id, clientSecret: stored.client_secret };
+      }
+    } catch {
+      // fall through to the error below
+    }
+  }
+  throw new Error('client credentials required');
+}
+
+/** Pull error/error_description out of an OAuth error response body. */
+async function describeTokenError(response: Response): Promise<string> {
+  const detail = await response
+    .json()
+    .then((body: { error?: string; error_description?: string }) =>
+      [body.error, body.error_description].filter(Boolean).join(' — ')
+    )
+    .catch(() => '');
+  return detail
+    ? `Token exchange failed (${response.status}): ${detail}`
+    : `Token exchange failed (${response.status}).`;
+}
+
 /** Wait for exactly one authorization redirect on a loopback server. */
 function waitForCallback(
   server: http.Server,
@@ -151,8 +198,17 @@ function waitForCallback(
  * Run the full authorization flow for `serverUrl` and store the tokens
  * under `secretRef`. Resolves when the keychain write is confirmed.
  */
-export async function runOAuthFlow(serverUrl: string, secretRef: string): Promise<void> {
-  const metadata = await discover(serverUrl);
+export async function runOAuthFlow(
+  serverUrl: string,
+  secretRef: string,
+  preset?: OAuthPreset
+): Promise<void> {
+  const metadata: AuthServerMetadata = preset
+    ? {
+        authorization_endpoint: preset.authorization_endpoint,
+        token_endpoint: preset.token_endpoint
+      }
+    : await discover(serverUrl);
 
   const server = http.createServer();
   await new Promise<void>((resolve) => {
@@ -166,7 +222,9 @@ export async function runOAuthFlow(serverUrl: string, secretRef: string): Promis
     }
     const redirectUri = `http://127.0.0.1:${address.port}/callback`;
 
-    const { clientId, clientSecret } = await registerClient(metadata, redirectUri);
+    const { clientId, clientSecret } = preset
+      ? await resolvePresetClient(preset, secretRef)
+      : await registerClient(metadata, redirectUri);
 
     const verifier = base64url(randomBytes(48));
     const challenge = base64url(createHash('sha256').update(verifier).digest());
@@ -179,9 +237,16 @@ export async function runOAuthFlow(serverUrl: string, secretRef: string): Promis
     authorizeUrl.searchParams.set('code_challenge', challenge);
     authorizeUrl.searchParams.set('code_challenge_method', 'S256');
     authorizeUrl.searchParams.set('state', state);
-    authorizeUrl.searchParams.set('resource', serverUrl);
-    if (metadata.scopes_supported?.length) {
-      authorizeUrl.searchParams.set('scope', metadata.scopes_supported.join(' '));
+    if (preset) {
+      authorizeUrl.searchParams.set('scope', preset.scopes.join(' '));
+      for (const [key, value] of Object.entries(preset.extra_auth_params ?? {})) {
+        authorizeUrl.searchParams.set(key, value);
+      }
+    } else {
+      authorizeUrl.searchParams.set('resource', serverUrl);
+      if (metadata.scopes_supported?.length) {
+        authorizeUrl.searchParams.set('scope', metadata.scopes_supported.join(' '));
+      }
     }
 
     const callback = waitForCallback(server, state);
@@ -196,9 +261,9 @@ export async function runOAuthFlow(serverUrl: string, secretRef: string): Promis
       code,
       redirect_uri: redirectUri,
       client_id: clientId,
-      code_verifier: verifier,
-      resource: serverUrl
+      code_verifier: verifier
     });
+    if (!preset) body.set('resource', serverUrl);
     if (clientSecret) body.set('client_secret', clientSecret);
     const tokenResponse = await fetch(metadata.token_endpoint, {
       method: 'POST',
@@ -206,7 +271,7 @@ export async function runOAuthFlow(serverUrl: string, secretRef: string): Promis
       body
     });
     if (!tokenResponse.ok) {
-      throw new Error(`Token exchange failed (${tokenResponse.status}).`);
+      throw new Error(await describeTokenError(tokenResponse));
     }
     const tokens = (await tokenResponse.json()) as {
       access_token: string;

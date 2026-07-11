@@ -8,6 +8,10 @@ import test, { expect } from '@playwright/test';
  */
 test.describe('Main window shell', () => {
   test.beforeEach(async ({ page }) => {
+    // Skip the first-run wizard; it has its own test below.
+    await page.addInitScript(() => {
+      localStorage.setItem('vox-onboarded', '1');
+    });
     await page.goto('/');
   });
 
@@ -23,7 +27,17 @@ test.describe('Main window shell', () => {
 
   test('navigates to connectors', async ({ page }) => {
     await page.getByRole('link', { name: 'Connectors' }).click();
-    await expect(page.getByRole('button', { name: 'Add server' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Browse directory' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Add custom' })).toBeVisible();
+  });
+
+  test('directory lists the Google connectors with shared sign-in', async ({ page }) => {
+    await page.getByRole('link', { name: 'Connectors' }).click();
+    await page.getByRole('button', { name: 'Browse directory' }).click();
+    await expect(page.getByText('Gmail', { exact: true })).toBeVisible();
+    await expect(page.getByText('Google Drive', { exact: true })).toBeVisible();
+    await expect(page.getByText('Google Calendar', { exact: true })).toBeVisible();
+    await expect(page.getByText('shared sign-in').first()).toBeVisible();
   });
 });
 
@@ -31,5 +45,13 @@ test.describe('Overlay window', () => {
   test('renders the idle mic pill', async ({ page }) => {
     await page.goto('/overlay');
     await expect(page.getByText('idle')).toBeVisible();
+  });
+});
+
+test.describe('First-run onboarding', () => {
+  test('shows the wizard until completed', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByText('Talk to your computer.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Continue' })).toBeVisible();
   });
 });

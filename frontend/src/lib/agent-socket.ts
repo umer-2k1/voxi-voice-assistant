@@ -1,4 +1,4 @@
-import type { ConnectorConfig } from '@vox/protocol';
+import type { ConnectorConfig, OAuthPreset } from '@vox/protocol';
 
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
@@ -205,7 +205,8 @@ export function testConnector(connector: ConnectorConfig): Promise<ConnectorTest
 export function startOAuth(
   serverUrl: string,
   secretReference: string,
-  name: string
+  name: string,
+  preset?: OAuthPreset
 ): Promise<OAuthResult> {
   if (socket?.readyState !== WebSocket.OPEN) {
     return Promise.resolve({ ok: false, error: 'Agent is not connected yet.' });
@@ -214,7 +215,7 @@ export function startOAuth(
   const frame = JSON.stringify({
     type: 'oauth_start',
     id,
-    payload: { server_url: serverUrl, secret_ref: secretReference, name }
+    payload: { server_url: serverUrl, secret_ref: secretReference, name, preset }
   });
   return new Promise((resolve) => {
     pendingOAuth.set(id, resolve);

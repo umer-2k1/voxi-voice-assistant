@@ -50,7 +50,11 @@ const handle = await startServer(token, {
         // connector. The keychain write happens before oauth_result.
         const { id } = message;
         console.error(`oauth: starting flow for ${message.payload.name}`);
-        void runOAuthFlow(message.payload.server_url, message.payload.secret_ref)
+        void runOAuthFlow(
+          message.payload.server_url,
+          message.payload.secret_ref,
+          message.payload.preset
+        )
           .then(() => handle.toUi({ type: 'oauth_result', id, payload: { ok: true } }))
           .catch((error: unknown) => {
             const detail = error instanceof Error ? error.message : String(error);

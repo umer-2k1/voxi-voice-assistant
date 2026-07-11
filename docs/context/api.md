@@ -23,6 +23,10 @@ Sidecar binds `127.0.0.1:0`, prints `{"port": N}` on stdout. All messages are JS
 | `need_input` | sidecar → ui | `{question}` |
 | `error` | sidecar → ui | `{message, recoverable}` |
 | `done` | sidecar → ui | `{thread_id}` |
+| `test_connector` | ui → sidecar | `{...connector}` — probe a server, list its tools |
+| `connector_test_result` | sidecar → ui | `{ok, tools, error?}` |
+| `oauth_start` | ui → sidecar | `{server_url, secret_ref, name, preset?}` — `preset` (`{client_id?, client_secret?, authorization_endpoint, token_endpoint, scopes, extra_auth_params?}`) skips discovery + dynamic registration for providers without it (Google); omitted `client_id` on re-auth reuses the stored client |
+| `oauth_result` | sidecar → ui | `{ok, error?}` — token set is already in the keychain when `ok` |
 
 **Core role (privileged):**
 | Message | Direction | Payload |
@@ -35,9 +39,9 @@ Sidecar binds `127.0.0.1:0`, prints `{"port": N}` on stdout. All messages are JS
 
 ## 2. Control channel — Tauri IPC commands (webview → Rust)
 
-- Connectors: `list_connectors`, `add_server`, `remove_server`, `test_connection`, `list_tools` (last two proxy to sidecar)
+- Connectors: `list_connectors`, `add_server`, `remove_server`, `set_connector_enabled` (removing a server deletes its secret only when no other connector shares the same `secret_ref`)
 - Settings: `get_settings`, `update_settings`
-- Secrets: `store_secret`, `delete_secret` — **no `get_secret` exposed to webview**
+- Secrets: `store_secret`, `delete_secret`, `has_secret` — **no `get_secret` exposed to webview**
 - System: `open_path`, `insert_text`
 - Permissions (macOS): `check_permissions`, `open_system_settings`
 - Sidecar: `get_sidecar_info` → `{port, token}`

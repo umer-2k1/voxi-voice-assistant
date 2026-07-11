@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { ConnectorTestResult } from '@/lib/agent-socket';
 import type { CatalogEntry } from '@/lib/connector-catalog';
-import type { ConnectorConfig } from '@vox/protocol';
+import type { ConnectorConfig, OAuthPreset } from '@vox/protocol';
 
+import { invoke } from '@tauri-apps/api/core';
+
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -62,8 +65,71 @@ export default function ConnectorsView() {
 function ConnectorRow({ connector }: Readonly<{ connector: ConnectorConfig }>) {
   const { setEnabled, remove } = useConnectorsStore();
   const [test, setTest] = useState<ConnectorTestResult | null>(null);
-  const [testing, setTesting] = useState(false);
+  // Enabled rows start in "testing": the mount probe below resolves it.
+  const [testing, setTesting] = useState(connector.enabled);
+  const [reauth, setReauth] = useState<'idle' | 'running' | 'creds'>('idle');
+  const probed = useRef(false);
 
+  const runTest = () => {
+    setTesting(true);
+    setTest(null);
+    void testConnector(connector).then((result) => {
+      setTest(result);
+      setTesting(false);
+    });
+  };
+
+  // Passive status: probe each enabled connector once when the row mounts.
+  useEffect(() => {
+    if (connector.enabled && !probed.current) {
+      probed.current = true;
+      void testConnector(connector).then((result) => {
+        setTest(result);
+        setTesting(false);
+      });
+    }
+  }, [connector]);
+
+  // Reconnect is offered for connectors backed by a browser sign-in.
+  const catalogEntry = CONNECTOR_CATALOG.find(
+    (entry) => entry.url !== undefined && entry.url === connector.url
+  );
+  const oauthEntry =
+    catalogEntry?.auth === 'oauth' || catalogEntry?.auth === 'oauth-preset'
+      ? catalogEntry
+      : undefined;
+
+  const reconnect = async (creds?: { clientId: string; clientSecret: string }) => {
+    if (oauthEntry === undefined || connector.secret_ref == null) {
+      return;
+    }
+    setReauth('running');
+    setTest(null);
+    const preset =
+      oauthEntry.auth === 'oauth-preset'
+        ? buildPresetPayload(oauthEntry, creds?.clientId, creds?.clientSecret)
+        : undefined;
+    const result = await startOAuth(
+      connector.url ?? '',
+      connector.secret_ref,
+      connector.name,
+      preset
+    );
+    if (!result.ok) {
+      // The stored token set is gone — fall back to asking for the client.
+      if (result.error?.includes('client credentials required') === true) {
+        setReauth('creds');
+        return;
+      }
+      setTest({ ok: false, tools: [], error: result.error ?? 'authorization failed' });
+      setReauth('idle');
+      return;
+    }
+    setReauth('idle');
+    runTest();
+  };
+
+  const status = connectorStatus(connector.enabled, testing || reauth === 'running', test);
   const monogram = connector.name.slice(0, 2).toUpperCase();
   const detail =
     connector.transport === 'stdio'
@@ -77,33 +143,28 @@ function ConnectorRow({ connector }: Readonly<{ connector: ConnectorConfig }>) {
           {monogram}
         </span>
         <div className='min-w-0 flex-1'>
-          <p className='text-ink truncate text-sm font-semibold'>{connector.name}</p>
+          <div className='flex items-center gap-2'>
+            <p className='text-ink truncate text-sm font-semibold'>{connector.name}</p>
+            {test?.ok ? <Badge variant='secondary'>{test.tools.length} tools</Badge> : null}
+          </div>
           <p className='truncate font-mono text-[11px] text-gray-500' title={detail}>
             {detail}
           </p>
         </div>
-        <span
-          className={cn(
-            'size-2 shrink-0 rounded-full',
-            connector.enabled ? 'bg-success' : 'bg-gray-300'
-          )}
-          aria-hidden
-        />
-        <Button
-          variant='outline'
-          size='sm'
-          disabled={testing}
-          onClick={() => {
-            setTesting(true);
-            setTest(null);
-            void testConnector(connector).then((result) => {
-              setTest(result);
-              setTesting(false);
-            });
-          }}
-        >
+        <StatusIndicator status={status} test={test} />
+        <Button variant='outline' size='sm' disabled={testing} onClick={runTest}>
           {testing ? 'Testing…' : 'Test'}
         </Button>
+        {oauthEntry === undefined ? null : (
+          <Button
+            variant='outline'
+            size='sm'
+            disabled={reauth === 'running'}
+            onClick={() => void reconnect()}
+          >
+            {reauth === 'running' ? 'Authorizing…' : 'Reconnect'}
+          </Button>
+        )}
         <Button
           variant={connector.enabled ? 'secondary' : 'default'}
           size='sm'
@@ -115,6 +176,21 @@ function ConnectorRow({ connector }: Readonly<{ connector: ConnectorConfig }>) {
           Remove
         </Button>
       </div>
+
+      {reauth === 'creds' ? (
+        <ClientCredsForm
+          idPrefix={`row-${connector.id}`}
+          submitLabel='Authorize'
+          onSubmit={(creds) => void reconnect(creds)}
+          onCancel={() => {
+            setReauth('idle');
+          }}
+        >
+          <p className='mono-label text-gray-500'>
+            no stored sign-in found — paste the OAuth client from Google Cloud Console
+          </p>
+        </ClientCredsForm>
+      ) : null}
 
       {test === null ? null : (
         <p
@@ -132,17 +208,173 @@ function ConnectorRow({ connector }: Readonly<{ connector: ConnectorConfig }>) {
   );
 }
 
+function StatusIndicator({
+  status,
+  test
+}: Readonly<{ status: ConnectorStatus; test: ConnectorTestResult | null }>) {
+  return (
+    <span
+      className='flex shrink-0 items-center gap-1.5'
+      title={test?.ok === false ? test.error : undefined}
+    >
+      <span
+        className={cn('size-2 rounded-full', {
+          'bg-success': status.tone === 'ok',
+          'bg-danger': status.tone === 'error',
+          'bg-vox-300 animate-pulse': status.tone === 'checking',
+          'bg-gray-300': status.tone === 'off'
+        })}
+        aria-hidden
+      />
+      <span className='mono-label text-gray-500'>{status.label}</span>
+    </span>
+  );
+}
+
 function formatToolList(tools: string[]): string {
   const preview = tools.slice(0, 8).join(', ');
   const suffix = tools.length > 8 ? '…' : '';
   return `connected · ${tools.length} tools: ${preview}${suffix}`;
 }
 
+export interface ConnectorStatus {
+  label: string;
+  tone: 'off' | 'checking' | 'ok' | 'error';
+}
+
+/** Row status from (enabled, in-flight probe, last result). */
+export function connectorStatus(
+  enabled: boolean,
+  testing: boolean,
+  test: ConnectorTestResult | null
+): ConnectorStatus {
+  if (!enabled) {
+    return { label: 'off', tone: 'off' };
+  }
+  if (test?.ok === true) {
+    return { label: 'connected', tone: 'ok' };
+  }
+  if (test !== null && !testing) {
+    return { label: 'error', tone: 'error' };
+  }
+  return { label: 'checking…', tone: 'checking' };
+}
+
+/**
+ * Map a catalog entry's OAuth preset (plus the user-created client, when
+ * the UI has it) into the protocol payload. Credentials may be omitted on
+ * re-auth — the sidecar then reuses the ones stored in the keychain.
+ */
+export function buildPresetPayload(
+  entry: CatalogEntry,
+  clientId?: string,
+  clientSecret?: string
+): OAuthPreset {
+  const preset = entry.oauthPreset;
+  if (!preset) {
+    throw new Error(`${entry.name} has no OAuth preset`);
+  }
+  return {
+    client_id: clientId,
+    client_secret: clientSecret,
+    authorization_endpoint: preset.authorizationEndpoint,
+    token_endpoint: preset.tokenEndpoint,
+    scopes: preset.scopes,
+    extra_auth_params: preset.extraAuthParams
+  };
+}
+
+/**
+ * Two-field OAuth-client input (ID + secret) shared by the directory
+ * cards and the row-level re-auth fallback. Children render above the
+ * inputs (setup hints, notes).
+ */
+function ClientCredsForm({
+  idPrefix,
+  submitLabel,
+  onSubmit,
+  onCancel,
+  children
+}: Readonly<{
+  idPrefix: string;
+  submitLabel: string;
+  onSubmit: (creds: { clientId: string; clientSecret: string }) => void;
+  onCancel: () => void;
+  children?: React.ReactNode;
+}>) {
+  const [clientId, setClientId] = useState('');
+  const [clientSecret, setClientSecret] = useState('');
+
+  return (
+    <div className='flex flex-col gap-1.5'>
+      {children}
+      <Label htmlFor={`${idPrefix}-cid`}>OAuth client ID</Label>
+      <Input
+        id={`${idPrefix}-cid`}
+        value={clientId}
+        onChange={(event) => {
+          setClientId(event.target.value);
+        }}
+      />
+      <Label htmlFor={`${idPrefix}-csec`}>OAuth client secret</Label>
+      <Input
+        id={`${idPrefix}-csec`}
+        type='password'
+        value={clientSecret}
+        placeholder='stored in the OS keychain'
+        onChange={(event) => {
+          setClientSecret(event.target.value);
+        }}
+      />
+      <div className='flex gap-2'>
+        <Button
+          size='sm'
+          disabled={clientId === '' || clientSecret === ''}
+          onClick={() => {
+            onSubmit({ clientId, clientSecret });
+          }}
+        >
+          {submitLabel}
+        </Button>
+        <Button size='sm' variant='ghost' onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ---------- Directory (click-to-connect catalog) ----------
 
 interface CardState {
-  state: 'idle' | 'token' | 'connecting' | 'added' | 'error';
+  state: 'idle' | 'token' | 'client-creds' | 'connecting' | 'added' | 'error';
   detail?: string;
+}
+
+/**
+ * Browser authorization for a directory entry; throws on failure.
+ * Preset entries with a provider-shared token set skip the consent when
+ * a sibling connector already signed in.
+ */
+async function authorizeEntry(
+  entry: CatalogEntry,
+  secretReference: string,
+  creds?: { clientId: string; clientSecret: string }
+): Promise<void> {
+  let preset: OAuthPreset | undefined;
+  if (entry.auth === 'oauth-preset') {
+    const hasToken = await invoke<boolean>('has_secret', { secretRef: secretReference }).catch(
+      () => false
+    );
+    if (hasToken) {
+      return;
+    }
+    preset = buildPresetPayload(entry, creds?.clientId, creds?.clientSecret);
+  }
+  const result = await startOAuth(entry.url ?? '', secretReference, entry.name, preset);
+  if (!result.ok) {
+    throw new Error(result.error ?? 'authorization failed');
+  }
 }
 
 function DirectoryDialog() {
@@ -162,7 +394,11 @@ function DirectoryDialog() {
         : connector.url === entry.url
     );
 
-  const connect = async (entry: CatalogEntry, secret?: string) => {
+  const connect = async (
+    entry: CatalogEntry,
+    secret?: string,
+    creds?: { clientId: string; clientSecret: string }
+  ) => {
     setCard(entry.key, 'connecting');
     try {
       const id = `${entry.key}-${Date.now().toString(36)}`;
@@ -176,14 +412,11 @@ function DirectoryDialog() {
           : { url: entry.url ?? '' })
       };
 
-      if (entry.auth === 'oauth') {
+      if (entry.auth === 'oauth' || entry.auth === 'oauth-preset') {
         // Sidecar runs the browser flow and stores the tokens in the
         // keychain before resolving; we only ever handle the reference.
-        const secretReference = `connector_${id}`;
-        const result = await startOAuth(entry.url ?? '', secretReference, entry.name);
-        if (!result.ok) {
-          throw new Error(result.error ?? 'authorization failed');
-        }
+        const secretReference = entry.sharedSecretRef ?? `connector_${id}`;
+        await authorizeEntry(entry, secretReference, creds);
         await add({ ...base, secret_ref: secretReference });
         await setEnabled(id, true);
       } else {
@@ -200,6 +433,20 @@ function DirectoryDialog() {
       setCard(entry.key, 'added', note);
     } catch (error) {
       setCard(entry.key, 'error', error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  // Sibling connector may have signed in already — if the shared token
+  // exists, connect without asking for anything.
+  const beginClientCreds = async (entry: CatalogEntry) => {
+    const reference = entry.sharedSecretRef ?? '';
+    const hasToken =
+      reference !== '' &&
+      (await invoke<boolean>('has_secret', { secretRef: reference }).catch(() => false));
+    if (hasToken) {
+      await connect(entry);
+    } else {
+      setCard(entry.key, 'client-creds');
     }
   };
 
@@ -229,10 +476,11 @@ function DirectoryDialog() {
                 setTokenDraft('');
                 setCard(entry.key, 'token');
               }}
+              onBeginClientCreds={() => void beginClientCreds(entry)}
               onCancelToken={() => {
                 setCard(entry.key, 'idle');
               }}
-              onConnect={(secret) => void connect(entry, secret)}
+              onConnect={(secret, creds) => void connect(entry, secret, creds)}
             />
           ))}
         </div>
@@ -248,8 +496,9 @@ interface DirectoryCardProperties {
   tokenDraft: string;
   onTokenDraft: (value: string) => void;
   onBeginToken: () => void;
+  onBeginClientCreds: () => void;
   onCancelToken: () => void;
-  onConnect: (secret?: string) => void;
+  onConnect: (secret?: string, creds?: { clientId: string; clientSecret: string }) => void;
 }
 
 function DirectoryCard({
@@ -259,6 +508,7 @@ function DirectoryCard({
   tokenDraft,
   onTokenDraft,
   onBeginToken,
+  onBeginClientCreds,
   onCancelToken,
   onConnect
 }: Readonly<DirectoryCardProperties>) {
@@ -272,7 +522,10 @@ function DirectoryCard({
           {entry.name.slice(0, 2).toUpperCase()}
         </span>
         <div className='min-w-0 flex-1'>
-          <p className='text-ink truncate text-sm font-semibold'>{entry.name}</p>
+          <div className='flex items-center gap-2'>
+            <p className='text-ink truncate text-sm font-semibold'>{entry.name}</p>
+            {entry.provider === 'google' ? <Badge variant='secondary'>shared sign-in</Badge> : null}
+          </div>
           <p className='mono-label text-gray-400'>{authBadge}</p>
         </div>
         {done ? (
@@ -285,6 +538,8 @@ function DirectoryCard({
             onClick={() => {
               if (entry.auth === 'token') {
                 onBeginToken();
+              } else if (entry.auth === 'oauth-preset') {
+                onBeginClientCreds();
               } else {
                 onConnect();
               }
@@ -297,8 +552,33 @@ function DirectoryCard({
 
       <p className='text-xs leading-relaxed text-gray-500'>{entry.description}</p>
 
-      {card.state === 'connecting' && entry.auth === 'oauth' ? (
+      {card.state === 'connecting' && (entry.auth === 'oauth' || entry.auth === 'oauth-preset') ? (
         <p className='mono-label text-vox-700'>authorize in your browser, then come back…</p>
+      ) : null}
+
+      {card.state === 'client-creds' ? (
+        <ClientCredsForm
+          idPrefix={`dir-${entry.key}`}
+          submitLabel='Connect'
+          onSubmit={(creds) => {
+            onConnect(undefined, creds);
+          }}
+          onCancel={onCancelToken}
+        >
+          <p className='rounded-md border border-gray-200 bg-gray-100 px-3 py-2 text-[11px] leading-relaxed text-gray-700'>
+            One-time setup: in Google Cloud Console, enable the Gmail, Drive, Calendar and Chat MCP
+            APIs, create an OAuth client of type “Desktop app”, and paste its ID and secret here.
+            Add yourself as a test user (or publish the app to avoid weekly re-consent). One sign-in
+            covers every Google connector.{' '}
+            <button
+              type='button'
+              className='text-vox-700 underline'
+              onClick={() => void invoke('open_path', { path: entry.oauthPreset?.setupUrl ?? '' })}
+            >
+              Open Google Cloud Console
+            </button>
+          </p>
+        </ClientCredsForm>
       ) : null}
 
       {card.state === 'token' ? (
@@ -349,6 +629,9 @@ function DirectoryCard({
 function describeAuth(auth: CatalogEntry['auth']): string {
   if (auth === 'oauth') {
     return 'sign in with your browser';
+  }
+  if (auth === 'oauth-preset') {
+    return 'sign in with Google (one-time setup)';
   }
   if (auth === 'token') {
     return 'needs an access token';

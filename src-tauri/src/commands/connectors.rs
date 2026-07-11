@@ -64,8 +64,15 @@ pub fn add_server(app: AppHandle, mut connector: Connector) -> Result<Vec<Connec
 pub fn remove_server(app: AppHandle, id: String) -> Result<Vec<Connector>, String> {
     let mut connectors = load(&app);
     if let Some(removed) = connectors.iter().find(|c| c.id == id) {
+        // Provider-shared token sets (e.g. all Google connectors point at
+        // "google_oauth") must survive until the last referrer is removed.
         if let Some(secret_ref) = &removed.secret_ref {
-            let _ = crate::commands::secrets::delete_secret(secret_ref.clone());
+            let still_used = connectors
+                .iter()
+                .any(|c| c.id != id && c.secret_ref.as_deref() == Some(secret_ref.as_str()));
+            if !still_used {
+                let _ = crate::commands::secrets::delete_secret(secret_ref.clone());
+            }
         }
     }
     connectors.retain(|c| c.id != id);

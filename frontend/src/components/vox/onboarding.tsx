@@ -282,7 +282,7 @@ function ReadyStep() {
         Vox heard and what it did.
       </p>
       <p className='text-sm leading-relaxed text-gray-700'>
-        To let Vox reach your tools — Notion, GitHub, Linear, your files — open{' '}
+        To let Vox reach your tools — Gmail, Google Drive, Notion, GitHub, your files — open{' '}
         <span className='font-semibold'>Connectors → Browse directory</span> and click connect.
       </p>
       <p className='text-xs text-gray-500'>

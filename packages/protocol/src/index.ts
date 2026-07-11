@@ -67,10 +67,29 @@ export const TestConnectorMessage = z.object({
 });
 
 /**
+ * Pre-registered OAuth client details for authorization servers without
+ * RFC 7591 dynamic registration (e.g. Google). When present the sidecar
+ * skips discovery and registration and uses these endpoints directly.
+ * `client_id` may be omitted on re-auth: the sidecar then reuses the
+ * client credentials persisted inside the stored token set.
+ */
+export const OAuthPreset = z.object({
+  client_id: z.string().optional(),
+  client_secret: z.string().optional(),
+  authorization_endpoint: z.string(),
+  token_endpoint: z.string(),
+  scopes: z.array(z.string()),
+  /** Extra authorize-URL query params, e.g. { access_type: 'offline', prompt: 'consent' }. */
+  extra_auth_params: z.record(z.string(), z.string()).optional()
+});
+export type OAuthPreset = z.infer<typeof OAuthPreset>;
+
+/**
  * UI → sidecar: run the OAuth 2.1 authorization flow for a remote MCP
  * server (directory click-to-connect). The sidecar discovers the
- * authorization server, opens the browser through the core, and stores
- * the resulting tokens in the keychain under `secret_ref`.
+ * authorization server (or uses `preset` when given), opens the browser
+ * through the core, and stores the resulting tokens in the keychain
+ * under `secret_ref`.
  */
 export const OAuthStartMessage = z.object({
   type: z.literal('oauth_start'),
@@ -78,7 +97,8 @@ export const OAuthStartMessage = z.object({
   payload: z.object({
     server_url: z.string(),
     secret_ref: z.string(),
-    name: z.string()
+    name: z.string(),
+    preset: OAuthPreset.optional()
   })
 });
 
