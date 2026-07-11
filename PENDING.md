@@ -10,14 +10,14 @@ Blocked items, open issues, and items needing user input.
 - **Windows validation** — no Windows machine in this environment; Windows exit tests run via CI builds + manual user checks.
 - **Merge to main** — work is pushed to `feat/google-workspace-connectors` (direct pushes to main are blocked in this environment); merge the branch or grant main-push.
 
-## Open technical questions
-- Bun vs Node for sidecar — week-1 gate (M0/M3). Bun not installed yet; will be evaluated during the gate spike.
-- Silero VAD via `ort` vs pure-Rust fallback (`earshot`/energy gate) — decide in M2 based on build friction.
-- Filesystem MCP: `npx @modelcontextprotocol/server-filesystem` (requires Node on user machine) vs vendored server — decide in M4.
+## Open technical questions — all resolved 2026-07-12 (see docs/context/decisions.md)
+- ~~Bun vs Node for sidecar~~ → **Node**: esbuild single-file bundle shipped as a Tauri resource, run by system Node ≥20 (`find_node()` scans PATH + common dirs; actionable error when missing).
+- ~~Silero VAD via `ort` vs fallback~~ → **whisper.cpp built-in Silero VAD**, shipped since M2; no extra deps.
+- ~~Filesystem MCP npx vs vendored~~ → **npx on the user machine** (user decision); consistent with the sidecar's Node requirement.
 
 ## Deferred hardening
 - ~~Strict CSP~~ — done 2026-07-11: production CSP locked to self + loopback WS + Ollama; `devCsp: null` keeps HMR working.
-- Sidecar release packaging (bun compile vs bundled Node) and unsigned builds remain.
+- ~~Sidecar release packaging~~ — done 2026-07-12: bundle + resource + release launch path. Unsigned builds (Gatekeeper warnings) remain an accepted risk; signing/notarization/auto-update deliberately skipped for now.
 
 ## Accepted risks (PRD §9.5)
 - Unsigned builds (Gatekeeper/SmartScreen warnings)

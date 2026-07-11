@@ -2,6 +2,14 @@
 
 Running log; larger ones get an ADR in `docs/decisions/`.
 
+## 2026-07-12 — Open questions resolved (closing the PENDING.md list)
+
+| Decision | Reason | Alternatives | Tradeoffs |
+|---|---|---|---|
+| **Sidecar packaging: esbuild single-file bundle (`sidecar/dist/index.mjs`) shipped as a Tauri resource, run by system Node ≥20** | Vox already requires Node on the user machine for npx-based stdio MCP servers (see Filesystem decision below), so a second runtime buys nothing; the bundle is 3.1 MB, builds in <1 s, and boots with the same `{"port":N}` handshake. `find_node()` scans PATH + common install dirs (GUI apps get a minimal PATH); missing Node surfaces as an actionable error with a nodejs.org pointer | `bun build --compile` (~90 MB binary, Bun not installed here, new runtime risk); Node SEA (fiddly postject/codesign steps per platform) | Packaged app depends on a system Node install; acceptable for unsigned prototype distribution, revisit a fully self-contained binary if that dependency bites |
+| **VAD: whisper.cpp built-in Silero VAD** (already shipped in M2) | Zero extra runtime deps — no `ort`, no separate ONNX session; the VAD model is fetched alongside the STT model and enabled when present | `ort`-based Silero; `earshot`/energy gate | Tied to whisper.cpp's VAD implementation; fine — it is exactly the gate the pipeline needs |
+| **Filesystem MCP: `npx @modelcontextprotocol/server-filesystem` on the user machine** (user decision) | Zero vendoring/maintenance; users who add stdio connectors are developers with Node anyway; the packaged sidecar now shares the same Node requirement | Vendored/compiled server | Requires Node on the user machine — accepted, and documented in SETUP |
+
 ## 2026-07-06 — Planning decisions
 
 | Decision | Reason | Alternatives | Tradeoffs |

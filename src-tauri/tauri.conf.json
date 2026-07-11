@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "pnpm --filter @vox/frontend dev",
     "devUrl": "http://localhost:3000",
-    "beforeBuildCommand": "pnpm --filter @vox/frontend build",
+    "beforeBuildCommand": "pnpm --filter @vox/frontend build && pnpm --filter @vox/sidecar build",
     "frontendDist": "../frontend/dist"
   },
   "app": {
@@ -47,6 +47,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "resources": {
+      "../sidecar/dist/index.mjs": "sidecar/index.mjs"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

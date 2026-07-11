@@ -33,17 +33,59 @@ impl Sidecar {
     }
 }
 
-/// Resolve the sidecar launch command.
-/// `VOX_SIDECAR_CMD` overrides (whitespace-split); the dev default runs
-/// the workspace's tsx against sidecar/src/index.ts. Release builds will
-/// ship a compiled binary via Tauri externalBin (M8).
-fn launch_command() -> Result<Command, String> {
+/// Find a Node.js ≥20 executable. GUI-launched apps on macOS get a
+/// minimal PATH, so scan the usual install locations too.
+fn find_node() -> Option<std::path::PathBuf> {
+    let candidates = std::env::var("PATH")
+        .unwrap_or_default()
+        .split(if cfg!(windows) { ';' } else { ':' })
+        .map(std::path::PathBuf::from)
+        .chain(
+            [
+                "/usr/local/bin",
+                "/opt/homebrew/bin",
+                "/usr/bin",
+                "C:\\Program Files\\nodejs",
+            ]
+            .iter()
+            .map(std::path::PathBuf::from),
+        )
+        .collect::<Vec<_>>();
+    let exe = if cfg!(windows) { "node.exe" } else { "node" };
+    candidates
+        .into_iter()
+        .map(|dir| dir.join(exe))
+        .find(|path| path.exists())
+}
+
+/// Resolve the sidecar launch command, in priority order:
+/// 1. `VOX_SIDECAR_CMD` override (whitespace-split),
+/// 2. the bundled single-file build (`resources/sidecar/index.mjs`)
+///    run with system Node — Vox already requires Node on the user
+///    machine for npx-based stdio MCP servers (ADR: packaging),
+/// 3. dev fallback: the workspace's tsx against sidecar/src/index.ts.
+fn launch_command(app: &AppHandle) -> Result<Command, String> {
     if let Ok(raw) = std::env::var("VOX_SIDECAR_CMD") {
         let mut parts = raw.split_whitespace();
         let program = parts.next().ok_or("VOX_SIDECAR_CMD is empty")?;
         let mut cmd = Command::new(program);
         cmd.args(parts);
         return Ok(cmd);
+    }
+
+    // Packaged: the esbuild bundle ships as a Tauri resource.
+    if let Ok(bundle) = app
+        .path()
+        .resolve("sidecar/index.mjs", tauri::path::BaseDirectory::Resource)
+    {
+        if bundle.exists() {
+            let node = find_node().ok_or(
+                "Node.js 20+ is required but was not found. Install it from nodejs.org, then restart Vox.",
+            )?;
+            let mut cmd = Command::new(node);
+            cmd.arg(bundle);
+            return Ok(cmd);
+        }
     }
 
     // Dev: src-tauri is the cwd under `tauri dev`; the sidecar package sits
@@ -71,7 +113,7 @@ pub fn spawn(app: &AppHandle) {
     }
 
     let token = app.state::<crate::AppState>().session_token.clone();
-    let mut cmd = match launch_command() {
+    let mut cmd = match launch_command(app) {
         Ok(c) => c,
         Err(e) => {
             log::error!("sidecar launch command unavailable: {e}");

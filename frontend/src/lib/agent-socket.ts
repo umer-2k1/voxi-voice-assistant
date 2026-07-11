@@ -55,7 +55,9 @@ export function startAgentBridge(window: 'main' | 'overlay' = 'main'): void {
     if (event.payload === 'ready') {
       void connectLoop();
     }
-    if (event.payload === 'failed') {
+    // 'unavailable' = launch command could not be built (e.g. Node
+    // missing on a packaged install) — same dead end as 'failed'.
+    if (event.payload === 'failed' || event.payload === 'unavailable') {
       useSessionStore.getState().setStatus('failed');
     }
   });

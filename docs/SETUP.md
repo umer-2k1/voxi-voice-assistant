@@ -12,7 +12,7 @@ Everything needed to go from a fresh clone to a working voice agent, for both de
 | **pnpm** | ≥ 10 | workspace package manager | `npm install -g pnpm@10.5.0` |
 | **Rust** | stable | Tauri core (hotkey, mic, STT, keychain) | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
 | **Xcode CLT** (macOS) | any recent | compiles the Rust core + whisper.cpp | `xcode-select --install` |
-| **MSVC Build Tooeels + WebView2** (Windows) | VS 2022 | same | [Tauri Windows prerequisites](https://v2.tauri.app/start/prerequisites/) |
+| **MSVC Build Tools + WebView2** (Windows) | VS 2022 | same | [Tauri Windows prerequisites](https://v2.tauri.app/start/prerequisites/) |
 | **cmake** | any recent | builds whisper.cpp via whisper-rs | `brew install cmake` (macOS) |
 
 **For the agent's brain — pick one (or both):**
@@ -25,6 +25,12 @@ Everything needed to go from a fresh clone to a working voice agent, for both de
 **For connectors (optional):**
 - Filesystem MCP server runs via `npx` — needs Node on `PATH` (already covered above).
 - GitHub connector needs a [Personal Access Token](https://github.com/settings/tokens).
+
+**Packaged builds (`pnpm tauri build`):** the agent ships as a single-file bundle
+(`resources/sidecar/index.mjs`) executed by **system Node ≥ 20** — the same Node
+requirement the npx-based connectors already impose. If Node is missing, Vox shows
+"agent failed" with an install pointer; install Node and hit the tray's
+**Restart agent**.
 
 ## 2. Install & first run
 
