@@ -2,6 +2,15 @@
 
 Session-by-session record of what was implemented. Newest first.
 
+## Session 2 — 2026-07-11: Google connectors, full permissions onboarding, hardening
+
+- **Google Workspace connectors** — Gmail/Drive/Calendar/Chat via Google's official hosted MCP servers. New OAuth *preset* flow (no DCR): user pastes a one-time GCP OAuth client, sidecar runs PKCE against Google, one consent covers all four via a shared `google_oauth` token set. Reconnect reuses stored client creds; `remove_server` refcounts shared secrets. Protocol `oauth_start.preset` (+ first protocol unit tests, `tsx --test`).
+- **Connectors page polish** — passive status probe, status pill, tool-count badge, Reconnect with creds fallback, shared `ClientCredsForm`.
+- **Permissions onboarding (production)** — real mic TCC state via AVFoundation, `request_microphone` (fires prompt via brief capture), `request_accessibility` (AX consent prompt), notifications via tauri-plugin-notification with real product use (approval/question notifications while unfocused). Shared `PermissionList` powers the wizard step and a new Settings → Permissions section; every row explains why + when.
+- **UI polish** — sidebar icons, live hotkey hint in the transcript empty state, STT radio accent, overlay effect lint fix; workspace is fully lint-clean.
+- **Hardening** — strict production CSP re-introduced (PENDING item closed); Playwright fixed (onboarding gate, reuse dev server) — 7/7 chromium, protocol 4/4, cargo build green.
+- **Shipped as** three commits on `feat/google-workspace-connectors` (direct main-push blocked in this environment).
+
 ## Session 1 (continued) — 2026-07-06/07: M0 done, M1–M4 built
 
 - **M0 complete** — all four risk gates executed and recorded in docs/context/decisions.md. Key findings: Bun and Node both run MCP stdio + ws (14 tools listed); whisper `small` is 25s on this Intel Mac (fails budget) but `base.en` is 1.04s (passes) — dev machine pinned to base.en; Node 22 required (21 breaks rolldown); Metal hangs on Intel → CPU whisper on x86_64.
