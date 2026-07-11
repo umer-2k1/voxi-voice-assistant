@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import OllamaModelPicker from '@/components/vox/ollama-model-picker';
+import PermissionList from '@/components/vox/permission-list';
 import { cn } from '@/lib/utils';
 
 const GROQ_KEY_REF = 'groq_api_key';
@@ -155,6 +156,7 @@ export default function SettingsView() {
               <input
                 type='radio'
                 name='stt-model'
+                className='accent-vox-500'
                 checked={settings.stt_model === model.key}
                 onChange={() => {
                   void update({ stt_model: model.key });
@@ -165,6 +167,13 @@ export default function SettingsView() {
             </label>
           ))}
         </div>
+      </Section>
+
+      <Section
+        title='Permissions'
+        hint='What Vox is allowed to do, and why. Grant here or revoke any time in System Settings.'
+      >
+        <PermissionList />
       </Section>
     </div>
   );

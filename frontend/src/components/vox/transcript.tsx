@@ -1,8 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { TranscriptTurn } from '@/stores/session';
+import type { Settings } from '@vox/protocol';
 
-import { cn } from '@/lib/utils';
+import { invoke } from '@tauri-apps/api/core';
+
+import { cn, formatHotkey } from '@/lib/utils';
 import { useSessionStore } from '@/stores/session';
 
 function timestamp(at: number): string {
@@ -14,6 +17,16 @@ export default function Transcript() {
   const turns = useSessionStore((s) => s.turns);
   const busy = useSessionStore((s) => s.busy);
   const bottom = useRef<HTMLDivElement>(null);
+  // The real configured hotkey, so the hint never lies (falls back to default).
+  const [hotkey, setHotkey] = useState('alt+space');
+
+  useEffect(() => {
+    void invoke<Settings>('get_settings')
+      .then((settings) => {
+        setHotkey(settings.hotkey);
+      })
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: 'smooth' });
@@ -23,7 +36,7 @@ export default function Transcript() {
     return (
       <div className='flex h-full flex-col items-center justify-center gap-2'>
         <p className='text-sm text-gray-500'>Hold the hotkey and speak.</p>
-        <span className='mono-label text-gray-400'>⌥ space · push-to-talk</span>
+        <span className='mono-label text-gray-400'>{formatHotkey(hotkey)} · push-to-talk</span>
       </div>
     );
   }

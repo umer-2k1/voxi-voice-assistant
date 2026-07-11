@@ -1,12 +1,13 @@
+import { Home, Plug, Settings } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
 import { cn } from '@/lib/utils';
 import { useSessionStore } from '@/stores/session';
 
 const NAV = [
-  { to: '/', label: 'Home' },
-  { to: '/connectors', label: 'Connectors' },
-  { to: '/settings', label: 'Settings' }
+  { to: '/', label: 'Home', Icon: Home },
+  { to: '/connectors', label: 'Connectors', Icon: Plug },
+  { to: '/settings', label: 'Settings', Icon: Settings }
 ];
 
 /** 244px sidebar per the design system: nav items + connection status. */
@@ -32,13 +33,14 @@ export default function Sidebar() {
             end={item.to === '/'}
             className={({ isActive }) =>
               cn(
-                'rounded-md px-3 py-2 text-sm font-medium transition-colors duration-120',
+                'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-120',
                 isActive
                   ? 'bg-accent text-accent-foreground'
                   : 'hover:bg-gray-150 text-gray-500 hover:text-gray-700'
               )
             }
           >
+            <item.Icon className='size-4' aria-hidden />
             {item.label}
           </NavLink>
         ))}
