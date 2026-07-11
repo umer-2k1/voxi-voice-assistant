@@ -7,6 +7,8 @@ import { buildAgent } from './graph.js';
 
 export interface AgentEvents {
   assistant(text: string): void;
+  /** Token-level chunk; the final assistant() for the turn is authoritative. */
+  assistantDelta(text: string): void;
   toolRunning(tool: string): void;
   confirmRequest(id: string, tool: string, params: Record<string, unknown>): void;
   needInput(question: string): void;
@@ -60,13 +62,36 @@ export class AgentRunner {
     }
 
     try {
+      // 'updates' drives the event protocol; 'messages' adds token-level
+      // deltas so replies render as they generate instead of all at once.
       const stream = await agent.stream(input as never, {
         configurable: { thread_id: threadId },
-        streamMode: 'updates'
+        streamMode: ['updates', 'messages']
       });
 
       let interrupted = false;
-      for await (const update of stream as AsyncIterable<Record<string, unknown>>) {
+      for await (const chunk of stream as AsyncIterable<[string, unknown]>) {
+        const [mode, payload] = chunk;
+
+        if (mode === 'messages') {
+          const [message, metadata] = payload as [
+            { content?: unknown; tool_call_chunks?: unknown[] },
+            { langgraph_node?: string } | undefined
+          ];
+          // Only pure-text tokens from the model node — tool-call chunks
+          // and tool outputs are surfaced through 'updates' events.
+          if (
+            metadata?.langgraph_node === 'agent' &&
+            typeof message.content === 'string' &&
+            message.content !== '' &&
+            (message.tool_call_chunks ?? []).length === 0
+          ) {
+            events.assistantDelta(message.content);
+          }
+          continue;
+        }
+
+        const update = payload as Record<string, unknown>;
         if ('__interrupt__' in update) {
           const interrupts = update['__interrupt__'] as Array<{
             id?: string;

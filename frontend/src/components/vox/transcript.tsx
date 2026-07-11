@@ -43,6 +43,17 @@ export default function Transcript() {
 
   return (
     <div className='flex h-full flex-col gap-3 overflow-y-auto px-8 py-6'>
+      <div className='flex justify-end'>
+        <button
+          type='button'
+          className='mono-label text-gray-400 transition-colors hover:text-gray-600'
+          onClick={() => {
+            useSessionStore.getState().newConversation();
+          }}
+        >
+          new conversation
+        </button>
+      </div>
       {turns.map((turn) => (
         <Turn key={turn.id} turn={turn} />
       ))}

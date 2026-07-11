@@ -10,6 +10,11 @@ import { Label } from '@/components/ui/label';
 import OllamaModelPicker from '@/components/vox/ollama-model-picker';
 import PermissionList from '@/components/vox/permission-list';
 import { cn } from '@/lib/utils';
+import {
+  disableTranscriptPersistence,
+  enableTranscriptPersistence,
+  isTranscriptPersistenceEnabled
+} from '@/stores/session';
 
 const GROQ_KEY_REF = 'groq_api_key';
 
@@ -175,7 +180,41 @@ export default function SettingsView() {
       >
         <PermissionList />
       </Section>
+
+      <Section title='Privacy' hint='Off by default. Nothing ever leaves this device either way.'>
+        <TranscriptPersistenceToggle />
+      </Section>
     </div>
+  );
+}
+
+/** Opt-in transcript persistence; disabling erases what was stored. */
+function TranscriptPersistenceToggle() {
+  const [enabled, setEnabled] = useState(isTranscriptPersistenceEnabled);
+
+  return (
+    <label className='flex items-start gap-2 text-sm text-gray-700'>
+      <input
+        type='checkbox'
+        className='accent-vox-500 mt-0.5'
+        checked={enabled}
+        onChange={(event) => {
+          if (event.target.checked) {
+            enableTranscriptPersistence();
+          } else {
+            disableTranscriptPersistence();
+          }
+          setEnabled(event.target.checked);
+        }}
+      />
+      <span>
+        Keep the transcript between launches
+        <span className='block text-xs text-gray-500'>
+          Stores the last 200 turns locally so a restart doesn&rsquo;t lose context. Turning this
+          off deletes the stored transcript immediately.
+        </span>
+      </span>
+    </label>
   );
 }
 

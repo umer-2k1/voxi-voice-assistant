@@ -148,6 +148,16 @@ export const AssistantMessage = z.object({
   payload: z.object({ text: z.string() })
 });
 
+/**
+ * Token-level chunk of the assistant reply being generated. The final
+ * `assistant_message` for the same turn always follows and is
+ * authoritative — receivers replace the streamed text with it.
+ */
+export const AssistantDeltaMessage = z.object({
+  type: z.literal('assistant_delta'),
+  payload: z.object({ text: z.string() })
+});
+
 export const ToolRunningMessage = z.object({
   type: z.literal('tool_running'),
   payload: z.object({ tool: z.string(), connector: z.string() })
@@ -225,6 +235,7 @@ export const StoreSecretMessage = z.object({
 export const OutboundToUiMessage = z.discriminatedUnion('type', [
   AuthOkMessage,
   AssistantMessage,
+  AssistantDeltaMessage,
   ToolRunningMessage,
   ConfirmRequestMessage,
   NeedInputMessage,

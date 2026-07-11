@@ -17,7 +17,8 @@ Sidecar binds `127.0.0.1:0`, prints `{"port": N}` on stdout. All messages are JS
 | `user_utterance` | ui → sidecar | `{text, thread_id}` |
 | `confirm_response` | ui → sidecar | `{id, approved}` |
 | `resume` | ui → sidecar | `{thread_id, text}` |
-| `assistant_message` | sidecar → ui | `{text}` |
+| `assistant_message` | sidecar → ui | `{text}` — authoritative full reply |
+| `assistant_delta` | sidecar → ui | `{text}` — token chunk while generating; replaced by the final `assistant_message` |
 | `tool_running` | sidecar → ui | `{tool, connector}` |
 | `confirm_request` | sidecar → ui | `{id, tool, connector, params}` |
 | `need_input` | sidecar → ui | `{question}` |

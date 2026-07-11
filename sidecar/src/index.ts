@@ -24,6 +24,7 @@ const handle = await startServer(token, {
   onUiMessage(message) {
     const events: AgentEvents = {
       assistant: (text) => handle.toUi({ type: 'assistant_message', payload: { text } }),
+      assistantDelta: (text) => handle.toUi({ type: 'assistant_delta', payload: { text } }),
       toolRunning: (tool) =>
         handle.toUi({ type: 'tool_running', payload: { tool, connector: 'vox' } }),
       confirmRequest: (id, tool, params) =>

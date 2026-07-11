@@ -129,6 +129,10 @@ function open(port: number, token: string): Promise<void> {
           store.addTurn('assistant', message.payload.text);
           break;
         }
+        case 'assistant_delta': {
+          store.appendDelta(message.payload.text);
+          break;
+        }
         case 'tool_running': {
           store.addTurn('tool', `${message.payload.connector} · ${message.payload.tool}`);
           break;
