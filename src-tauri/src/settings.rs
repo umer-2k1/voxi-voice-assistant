@@ -17,7 +17,7 @@ impl Default for Settings {
         Self {
             hotkey: "alt+space".into(),
             llm_provider: "groq".into(),
-            llm_model: "llama-3.3-70b-versatile".into(),
+            llm_model: "llama-3.1-8b-instant".into(),
             stt_model: "small".into(),
         }
     }

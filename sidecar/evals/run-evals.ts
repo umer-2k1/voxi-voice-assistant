@@ -90,7 +90,7 @@ const settings = {
   hotkey: 'alt+space',
   llm_provider: provider,
   llm_model:
-    process.env['VOX_EVAL_MODEL'] ?? (provider === 'groq' ? 'llama-3.3-70b-versatile' : 'qwen3:1.7b'),
+    process.env['VOX_EVAL_MODEL'] ?? (provider === 'groq' ? 'llama-3.1-8b-instant' : 'qwen3:1.7b'),
   stt_model: 'base.en'
 };
 
