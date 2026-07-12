@@ -8,6 +8,7 @@ Upcoming work, in priority order. Mirrors `docs/tasks/todo.md`.
 - [ ] Grant mic / Accessibility / notifications from Onboarding or Settings → Permissions
 - [ ] **Google connectors live test** — create the GCP OAuth client, enable the MCP APIs, connect Gmail from the directory, say "check my latest five emails"
 - [ ] **Merge `feat/google-workspace-connectors` into main** (direct main-push blocked in this environment)
+- [ ] **Enable GitHub Pages** — repo Settings → Pages → Source: "GitHub Actions" (one click; the `deploy-pages` workflow then publishes `site/` on every push to main)
 
 ## M5 — remaining
 - [ ] S3 live validation (needs GitHub PAT)

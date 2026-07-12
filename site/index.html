@@ -1,0 +1,719 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vox — the open-source voice agent for your desktop</title>
+<meta name="description" content="Hold a key, speak, and Vox acts — on-device speech recognition, a real planning agent, and connectors for your files, GitHub, and Google Workspace. Private by default, open source, and it always asks before doing anything irreversible." />
+<meta property="og:title" content="Vox — the open-source voice agent for your desktop" />
+<meta property="og:description" content="Hold a key. Say it. It's done. On-device speech, a real agent, and a confirmation gate before every side effect. Apache-2.0." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://umer-2k1.github.io/voxi-voice-assistant/" />
+<meta property="og:image" content="https://umer-2k1.github.io/voxi-voice-assistant/og-logo.png" />
+<meta name="twitter:card" content="summary" />
+<meta name="color-scheme" content="light" />
+<link rel="icon" type="image/png" href="icon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet" />
+<style>
+  /* ------------------------------------------------------------------
+     Vox design system — "Halcyon" · Light · v1.0
+     Tokens mirror docs/context/design-tokens.txt (the app's theme).
+     One accent (Vox Blue), cool neutrals, borders-first elevation.
+     ------------------------------------------------------------------ */
+  :root {
+    --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+    --blue-50: #eef0fe; --blue-100: #e0e4fd; --blue-200: #c3cafb;
+    --blue-300: #9aa5f6; --blue-400: #6e79f0; --blue-500: #4b57e8;
+    --blue-600: #3d48d6; --blue-700: #333cb4; --blue-800: #2c337e;
+
+    --ink: #1a1c22;
+    --gray-900: #23262e; --gray-700: #3a3f4a; --gray-500: #6b707c;
+    --gray-400: #9aa0ad; --gray-300: #c2c7d2; --gray-200: #e4e6ec;
+    --gray-150: #eceef3; --gray-100: #f6f7fa; --gray-50: #fbfbfd;
+    --white: #ffffff;
+
+    --success: #22a366; --success-bg: #e7f6ee;
+    --caution: #e0a32e; --caution-bg: #fffcf4; --caution-text: #9a7a20;
+    --danger: #dc4b43; --danger-bg: #fdecea;
+
+    --surface-app: #e4e6ea;
+
+    --radius-sm: 6px; --radius-md: 9px; --radius-lg: 12px;
+    --radius-xl: 16px; --radius-window: 18px; --radius-pill: 999px;
+
+    --shadow-card: 0 1px 3px rgba(20, 22, 45, 0.06), 0 1px 2px rgba(20, 22, 45, 0.04);
+    --shadow-md: 0 8px 24px -12px rgba(20, 22, 45, 0.18);
+    --shadow-pop: 0 12px 32px -12px rgba(20, 22, 45, 0.24);
+    --shadow-window: 0 40px 90px -40px rgba(20, 22, 45, 0.4);
+    --shadow-glow: 0 8px 20px -6px rgba(75, 87, 232, 0.55);
+    --focus-ring: 0 0 0 3px rgba(75, 87, 232, 0.28);
+
+    --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+    --dur-wave: 0.95s;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font: 400 16px/1.55 var(--font-sans);
+    color: var(--gray-700);
+    background: var(--gray-50);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection { background: var(--blue-100); color: var(--blue-800); }
+  a { color: inherit; text-decoration: none; }
+  img { max-width: 100%; display: block; }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 28px; }
+
+  /* --- type ------------------------------------------------------- */
+  .mono-label {
+    font: 500 11px/1.2 var(--font-mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gray-500);
+  }
+  .mono-label.accent { color: var(--blue-500); }
+  h1, h2, h3 { color: var(--ink); letter-spacing: -0.02em; }
+  h1 { font-weight: 800; font-size: clamp(40px, 6vw, 62px); line-height: 1.05; letter-spacing: -0.03em; }
+  h2 { font-weight: 800; font-size: clamp(28px, 4vw, 38px); line-height: 1.12; }
+  h3 { font-weight: 700; font-size: 17px; line-height: 1.2; letter-spacing: -0.01em; }
+  .lede { font-size: 18px; color: var(--gray-500); max-width: 58ch; }
+
+  /* --- buttons ----------------------------------------------------- */
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    font: 600 15px/1 var(--font-sans);
+    padding: 14px 22px; border-radius: var(--radius-md);
+    border: 1px solid transparent; cursor: pointer; white-space: nowrap;
+    transition: background 200ms var(--ease-out), border-color 200ms var(--ease-out),
+                box-shadow 200ms var(--ease-out), transform 200ms var(--ease-out);
+  }
+  .btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+  .btn-primary { background: var(--blue-500); color: var(--white); box-shadow: var(--shadow-glow); }
+  .btn-primary:hover { background: var(--blue-600); transform: translateY(-1px); }
+  .btn-primary:active { background: var(--blue-700); transform: none; }
+  .btn-ghost { background: var(--white); color: var(--ink); border-color: var(--gray-200); box-shadow: var(--shadow-card); }
+  .btn-ghost:hover { border-color: var(--gray-300); background: var(--gray-100); }
+  .btn svg { flex: none; }
+
+  /* --- nav ---------------------------------------------------------- */
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(251, 251, 253, 0.85);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--gray-150);
+  }
+  .nav-inner { display: flex; align-items: center; gap: 32px; height: 64px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; color: var(--ink); letter-spacing: -0.02em; }
+  .brand img { width: 28px; height: 28px; border-radius: 7px; }
+  .nav-links { display: flex; gap: 26px; margin-left: 12px; font-size: 14.5px; font-weight: 500; color: var(--gray-500); }
+  .nav-links a { transition: color 120ms var(--ease-out); }
+  .nav-links a:hover { color: var(--ink); }
+  .nav-cta { margin-left: auto; display: flex; gap: 10px; }
+  .nav .btn { padding: 9px 16px; font-size: 14px; }
+
+  /* --- hero ---------------------------------------------------------- */
+  .hero { padding: 88px 0 40px; overflow: hidden; }
+  .hero-grid { display: grid; grid-template-columns: 1.02fr 0.98fr; gap: 56px; align-items: center; }
+  .hero h1 .accent { color: var(--blue-500); }
+  .hero .lede { margin: 22px 0 30px; }
+  .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+  .hero-trust { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 26px; }
+  .hero-trust span { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; color: var(--gray-500); }
+  .hero-trust svg { color: var(--success); flex: none; }
+
+  /* hero visual — a little desktop scene built from the app's own UI */
+  .scene { position: relative; min-height: 460px; }
+  .scene-bg {
+    position: absolute; inset: -8% -22% -8% -6%;
+    background:
+      radial-gradient(58% 52% at 68% 30%, var(--blue-100) 0%, rgba(224, 228, 253, 0) 70%),
+      radial-gradient(44% 44% at 30% 78%, #dfe2f2 0%, rgba(228, 230, 234, 0) 72%);
+    border-radius: 40px;
+  }
+  .window {
+    position: relative;
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-window);
+    box-shadow: var(--shadow-window);
+    overflow: hidden;
+  }
+  .titlebar { display: flex; align-items: center; gap: 8px; padding: 13px 16px; border-bottom: 1px solid var(--gray-150); background: var(--gray-50); }
+  .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--gray-200); }
+  .titlebar .title { margin-left: 8px; font: 500 11px/1.2 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray-400); }
+  .chat { padding: 20px 18px 26px; display: flex; flex-direction: column; gap: 12px; }
+  .bubble { max-width: 85%; padding: 10px 14px; border-radius: var(--radius-lg); font-size: 13.5px; line-height: 1.45; }
+  .bubble.user { align-self: flex-end; background: var(--blue-500); color: var(--white); border-bottom-right-radius: 4px; }
+  .bubble.vox { align-self: flex-start; background: var(--gray-100); color: var(--gray-700); border: 1px solid var(--gray-150); border-bottom-left-radius: 4px; }
+  .toolline { display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; font: 500 10.5px/1.2 var(--font-mono); letter-spacing: 0.08em; color: var(--gray-500); background: var(--gray-50); border: 1px solid var(--gray-150); padding: 6px 10px; border-radius: var(--radius-pill); }
+  .toolline .spark { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+
+  /* confirm card — the product's signature interaction */
+  .confirm {
+    position: absolute; right: -14px; bottom: 96px; width: 300px;
+    background: var(--white); border: 1px solid var(--gray-200);
+    border-radius: var(--radius-xl); box-shadow: var(--shadow-pop);
+    padding: 16px; z-index: 3;
+  }
+  .confirm .head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .confirm .head .shield { color: var(--caution); }
+  .confirm .head span { font-weight: 700; font-size: 13.5px; color: var(--ink); }
+  .confirm code {
+    display: block; font: 500 11.5px/1.6 var(--font-mono); color: var(--gray-700);
+    background: var(--gray-100); border: 1px solid var(--gray-150);
+    border-radius: var(--radius-sm); padding: 9px 11px; margin-bottom: 12px;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .confirm .row { display: flex; gap: 8px; }
+  .confirm .row .btn { flex: 1; justify-content: center; padding: 9px 0; font-size: 13px; border-radius: var(--radius-sm); }
+  .confirm .deny { background: var(--white); border-color: var(--gray-200); color: var(--gray-700); }
+  .confirm .approve { background: var(--blue-500); color: var(--white); box-shadow: none; }
+
+  /* mic pill with the equalizer — the only looping motion, as in the app */
+  .pill {
+    position: absolute; left: 26px; bottom: -24px; z-index: 4;
+    display: flex; align-items: center; gap: 12px;
+    background: var(--ink); color: var(--white);
+    border-radius: var(--radius-pill); padding: 13px 22px 13px 17px;
+    box-shadow: var(--shadow-pop);
+  }
+  .eq { display: flex; align-items: center; gap: 3px; height: 20px; }
+  .eq i { width: 3.5px; border-radius: 2px; background: var(--blue-300); height: 30%; animation: wave var(--dur-wave) ease-in-out infinite alternate; }
+  .eq i:nth-child(1) { animation-delay: 0s; }
+  .eq i:nth-child(2) { animation-delay: 0.12s; height: 55%; }
+  .eq i:nth-child(3) { animation-delay: 0.24s; height: 90%; background: var(--blue-400); }
+  .eq i:nth-child(4) { animation-delay: 0.36s; height: 60%; }
+  .eq i:nth-child(5) { animation-delay: 0.48s; height: 35%; }
+  @keyframes wave { from { transform: scaleY(0.45); } to { transform: scaleY(1.6); } }
+  .pill span { font-size: 13.5px; font-weight: 600; }
+  .pill kbd {
+    font: 500 11px/1 var(--font-mono); letter-spacing: 0.08em;
+    background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.22);
+    padding: 5px 8px; border-radius: 6px;
+  }
+
+  /* --- connector strip ---------------------------------------------- */
+  .strip { padding: 76px 0 8px; text-align: center; }
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 18px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13.5px; font-weight: 600; color: var(--gray-700);
+    background: var(--white); border: 1px solid var(--gray-200);
+    border-radius: var(--radius-pill); padding: 8px 16px; box-shadow: var(--shadow-card);
+  }
+  .chip .cdot { width: 7px; height: 7px; border-radius: 50%; background: var(--blue-400); }
+  .chip.more { color: var(--blue-600); background: var(--blue-50); border-color: var(--blue-100); }
+  .chip.more .cdot { background: var(--blue-500); }
+
+  /* --- sections ------------------------------------------------------ */
+  section { padding: 96px 0; }
+  .section-head { max-width: 640px; margin-bottom: 48px; }
+  .section-head .mono-label { display: block; margin-bottom: 14px; }
+  .section-head p { margin-top: 16px; color: var(--gray-500); font-size: 16.5px; }
+
+  /* problem */
+  .problem { background: var(--white); border-block: 1px solid var(--gray-150); }
+  .trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .trio .card h3 { margin-bottom: 8px; }
+
+  .card {
+    background: var(--white); border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg); padding: 26px; box-shadow: var(--shadow-card);
+    transition: border-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out), transform 200ms var(--ease-out);
+  }
+  .card:hover { border-color: var(--blue-200); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+  .card p { font-size: 14.5px; color: var(--gray-500); }
+  .icon-tile {
+    width: 40px; height: 40px; border-radius: var(--radius-md);
+    display: grid; place-items: center; margin-bottom: 16px;
+    background: var(--blue-50); color: var(--blue-600); border: 1px solid var(--blue-100);
+  }
+
+  /* how it works */
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; counter-reset: step; }
+  .step { position: relative; background: var(--white); border: 1px solid var(--gray-200); border-radius: var(--radius-lg); padding: 26px 22px; box-shadow: var(--shadow-card); }
+  .step .num { font: 500 11px/1 var(--font-mono); letter-spacing: 0.1em; color: var(--blue-500); background: var(--blue-50); border: 1px solid var(--blue-100); border-radius: var(--radius-pill); padding: 6px 11px; display: inline-block; margin-bottom: 16px; }
+  .step h3 { margin-bottom: 8px; }
+  .step p { font-size: 14px; color: var(--gray-500); }
+  .step kbd { font: 500 12px/1 var(--font-mono); background: var(--gray-100); border: 1px solid var(--gray-200); border-bottom-width: 2px; border-radius: 6px; padding: 3px 7px; color: var(--gray-700); }
+
+  /* features */
+  .features { background: var(--white); border-block: 1px solid var(--gray-150); }
+  .grid-6 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .grid-6 .card { background: var(--gray-50); }
+  .grid-6 h3 { margin-bottom: 8px; }
+
+  /* privacy — the one dark passage, in the app's own ink */
+  .privacy { background: var(--ink); color: var(--gray-300); }
+  .privacy h2 { color: var(--white); }
+  .privacy .section-head p { color: var(--gray-400); }
+  .privacy-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 56px; align-items: start; }
+  .checks { list-style: none; display: flex; flex-direction: column; gap: 18px; }
+  .checks li { display: flex; gap: 14px; font-size: 15.5px; line-height: 1.5; }
+  .checks strong { color: var(--white); font-weight: 600; }
+  .checks svg { flex: none; margin-top: 3px; color: var(--success); }
+  .stat-stack { display: grid; gap: 14px; }
+  .stat { background: var(--gray-900); border: 1px solid #31343e; border-radius: var(--radius-lg); padding: 22px 24px; }
+  .stat .big { font-weight: 800; font-size: 30px; letter-spacing: -0.02em; color: var(--white); }
+  .stat .big .u { color: var(--blue-300); }
+  .stat p { font-size: 13.5px; color: var(--gray-400); margin-top: 4px; }
+
+  /* comparison */
+  .compare-scroll { overflow-x: auto; border: 1px solid var(--gray-200); border-radius: var(--radius-lg); background: var(--white); box-shadow: var(--shadow-card); }
+  table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 14.5px; }
+  th, td { text-align: left; padding: 15px 20px; border-bottom: 1px solid var(--gray-150); }
+  tbody tr:last-child td { border-bottom: none; }
+  thead th { font: 500 11px/1.2 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray-500); background: var(--gray-50); }
+  thead th.vox-col { color: var(--blue-600); background: var(--blue-50); }
+  td.vox-col { background: var(--blue-50); font-weight: 600; color: var(--blue-800); }
+  td:first-child { font-weight: 600; color: var(--ink); }
+  td .sub { display: block; font-weight: 400; font-size: 12.5px; color: var(--gray-500); margin-top: 2px; }
+  td.vox-col .sub { color: var(--blue-700); font-weight: 400; }
+  .yes { color: var(--success); font-weight: 700; }
+  .no { color: var(--gray-400); }
+  .part { color: var(--caution-text); }
+
+  /* open source cta */
+  .oss { text-align: center; }
+  .oss .inner { background: linear-gradient(180deg, var(--blue-50) 0%, var(--gray-50) 100%); border: 1px solid var(--blue-100); border-radius: 24px; padding: 72px 40px; }
+  .oss h2 { margin: 14px 0 16px; }
+  .oss .lede { margin: 0 auto 32px; }
+  .oss-ctas { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .proto-note {
+    display: inline-flex; align-items: center; gap: 9px; margin-top: 30px;
+    font-size: 13px; color: var(--caution-text);
+    background: var(--caution-bg); border: 1px solid var(--caution-line, #f0e4c6);
+    border-radius: var(--radius-pill); padding: 8px 16px;
+  }
+  .proto-note .cdot { width: 7px; height: 7px; border-radius: 50%; background: var(--caution); }
+
+  /* footer */
+  footer { border-top: 1px solid var(--gray-150); background: var(--white); padding: 44px 0 52px; }
+  .foot { display: flex; align-items: flex-start; justify-content: space-between; gap: 32px; flex-wrap: wrap; }
+  .foot .brand img { width: 24px; height: 24px; }
+  .foot .tag { margin-top: 10px; font-size: 13.5px; color: var(--gray-500); max-width: 34ch; }
+  .foot-links { display: flex; gap: 48px; flex-wrap: wrap; }
+  .foot-links .col { display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+  .foot-links .mono-label { margin-bottom: 4px; }
+  .foot-links a { color: var(--gray-500); transition: color 120ms var(--ease-out); }
+  .foot-links a:hover { color: var(--ink); }
+  .legal { margin-top: 40px; padding-top: 22px; border-top: 1px solid var(--gray-150); font-size: 12.5px; color: var(--gray-400); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+  /* reveal on scroll */
+  .reveal { opacity: 0; transform: translateY(16px); transition: opacity 600ms var(--ease-out), transform 600ms var(--ease-out); }
+  .reveal.in { opacity: 1; transform: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .eq i { animation: none; }
+    .reveal { opacity: 1; transform: none; transition: none; }
+    .btn, .card { transition: none; }
+  }
+
+  /* --- responsive ---------------------------------------------------- */
+  @media (max-width: 1020px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 72px; }
+    .scene { max-width: 560px; margin: 0 auto; }
+    .steps { grid-template-columns: repeat(2, 1fr); }
+    .grid-6 { grid-template-columns: repeat(2, 1fr); }
+    .privacy-grid { grid-template-columns: 1fr; gap: 40px; }
+  }
+  @media (max-width: 720px) {
+    section { padding: 72px 0; }
+    .hero { padding-top: 56px; }
+    .nav-links { display: none; }
+    .trio { grid-template-columns: 1fr; }
+    .grid-6 { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr; }
+    .confirm { right: 4px; width: 270px; bottom: 84px; }
+    .stat-stack { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 460px) {
+    .wrap { padding: 0 20px; }
+    .pill { left: 12px; padding: 11px 16px 11px 14px; }
+    .confirm { display: none; }
+    .hero-ctas .btn { width: 100%; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================== nav =============================== -->
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#top" aria-label="Vox home">
+      <img src="icon.png" alt="" width="28" height="28" />
+      Vox
+    </a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#compare">Compare</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn btn-ghost" href="https://github.com/umer-2k1/voxi-voice-assistant" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+        GitHub
+      </a>
+      <a class="btn btn-primary" href="https://github.com/umer-2k1/voxi-voice-assistant#readme" rel="noopener">Get Vox</a>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============================ hero ============================== -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="mono-label accent">Open source · Local-first · macOS + Windows</span>
+        <h1 style="margin-top:18px">Hold a key.<br /><span class="accent">Say it.</span> It&rsquo;s done.</h1>
+        <p class="lede">Vox is an open-source voice agent for your desktop. It hears you on-device, plans with a real agent, and acts across your files, GitHub, and Google Workspace &mdash; asking first before anything irreversible.</p>
+        <div class="hero-ctas">
+          <a class="btn btn-primary" href="https://github.com/umer-2k1/voxi-voice-assistant" rel="noopener">
+            <svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+            Get Vox on GitHub
+          </a>
+          <a class="btn btn-ghost" href="#how">See how it works</a>
+        </div>
+        <div class="hero-trust">
+          <span><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-8 8a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L8 12.6l7.3-7.3a1 1 0 0 1 1.4 0Z"/></svg>Audio never leaves your machine</span>
+          <span><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-8 8a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L8 12.6l7.3-7.3a1 1 0 0 1 1.4 0Z"/></svg>Apache-2.0 licensed</span>
+          <span><svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-8 8a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L8 12.6l7.3-7.3a1 1 0 0 1 1.4 0Z"/></svg>Works with any MCP server</span>
+        </div>
+      </div>
+
+      <!-- the product, drawn in its own design system -->
+      <div class="scene" aria-hidden="true">
+        <div class="scene-bg"></div>
+        <div class="window">
+          <div class="titlebar">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="title">Vox &mdash; transcript</span>
+          </div>
+          <div class="chat">
+            <div class="bubble user">move this month&rsquo;s screenshots into a folder called june</div>
+            <div class="toolline"><span class="spark"></span>FILESYSTEM &middot; LIST_DIRECTORY</div>
+            <div class="bubble vox">Found 34 screenshots from June on your desktop. I need approval to create the folder and move them.</div>
+            <div class="bubble user">go ahead</div>
+            <div class="bubble vox">Done &mdash; 34 files moved to ~/Desktop/june.</div>
+          </div>
+        </div>
+
+        <div class="confirm">
+          <div class="head">
+            <svg class="shield" width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 1.9 3.3 4.3v4.9c0 4.3 2.9 7.4 6.7 8.9 3.8-1.5 6.7-4.6 6.7-8.9V4.3L10 1.9Zm0 4.6a1 1 0 0 1 1 1v3a1 1 0 1 1-2 0v-3a1 1 0 0 1 1-1Zm0 7.9a1.1 1.1 0 1 0 0-2.2 1.1 1.1 0 0 0 0 2.2Z"/></svg>
+            <span>Vox wants to run</span>
+          </div>
+          <code>move_file
+{ "source": "Screenshot&hellip;36.png",
+  "destination": "june/" }</code>
+          <div class="row">
+            <button class="btn deny" type="button">Deny</button>
+            <button class="btn approve" type="button">Approve</button>
+          </div>
+        </div>
+
+        <div class="pill">
+          <span class="eq"><i></i><i></i><i></i><i></i><i></i></span>
+          <span>Listening&hellip;</span>
+          <kbd>&#8997; Space</kbd>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================== connector strip ========================= -->
+  <div class="strip reveal">
+    <div class="wrap">
+      <span class="mono-label">Speaks to the tools you already use</span>
+      <div class="chips">
+        <span class="chip"><span class="cdot"></span>Gmail</span>
+        <span class="chip"><span class="cdot"></span>Google Drive</span>
+        <span class="chip"><span class="cdot"></span>Google Calendar</span>
+        <span class="chip"><span class="cdot"></span>Google Chat</span>
+        <span class="chip"><span class="cdot"></span>GitHub</span>
+        <span class="chip"><span class="cdot"></span>Filesystem</span>
+        <span class="chip more"><span class="cdot"></span>+ any MCP server</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================== problem ============================ -->
+  <section class="problem" id="problem">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="mono-label accent">The problem</span>
+        <h2>Assistants that talk. Tools that wait.</h2>
+        <p>Cloud assistants ship your voice to someone else&rsquo;s servers and hand back a paragraph. OS assistants set timers. The actual work &mdash; moving files, filing the issue, checking the calendar &mdash; still means finding the window, clicking through menus, and retyping context you already have. Vox closes that gap: an agent that lives on your desktop, hears you locally, and does the thing.</p>
+      </div>
+      <div class="trio">
+        <div class="card reveal">
+          <div class="icon-tile"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 9h20"/></svg></div>
+          <h3>No context-switching</h3>
+          <p>The hotkey works from any app. Dictate into your editor, file a GitHub issue, or check tomorrow&rsquo;s calendar without ever leaving the window you&rsquo;re in.</p>
+        </div>
+        <div class="card reveal">
+          <div class="icon-tile"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg></div>
+          <h3>No audio upload</h3>
+          <p>Speech is transcribed on your machine by whisper.cpp and processed in memory. There is no server to trust, because there is no server.</p>
+        </div>
+        <div class="card reveal">
+          <div class="icon-tile"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+          <h3>No blind automation</h3>
+          <p>Every side effect is shown as the exact tool and parameters before it runs. One glance, one click &mdash; nothing happens behind your back.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= how it works ========================= -->
+  <section id="how">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="mono-label accent">How it works</span>
+        <h2>From voice to action in four beats.</h2>
+      </div>
+      <div class="steps">
+        <div class="step reveal">
+          <span class="num">01</span>
+          <h3>Hold the hotkey</h3>
+          <p><kbd>&#8997; Space</kbd> &mdash; or any binding you record &mdash; from any app, focused or not. A small pill appears; Vox is listening only while you hold it.</p>
+        </div>
+        <div class="step reveal">
+          <span class="num">02</span>
+          <h3>Speak</h3>
+          <p>whisper.cpp transcribes on-device in about a second, with built-in voice-activity detection. Audio stays in memory and is never written to disk.</p>
+        </div>
+        <div class="step reveal">
+          <span class="num">03</span>
+          <h3>The agent plans</h3>
+          <p>A LangGraph agent picks the right tool for the job &mdash; your filesystem, GitHub, Gmail, Calendar, a system action, or any MCP server you&rsquo;ve connected.</p>
+        </div>
+        <div class="step reveal">
+          <span class="num">04</span>
+          <h3>You approve</h3>
+          <p>Reads run instantly. Anything that changes state pauses and shows you the exact call. Approve it, or deny it and the action is cleanly cancelled.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================== features =========================== -->
+  <section class="features" id="features">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="mono-label accent">Features</span>
+        <h2>Small surface. Serious machinery.</h2>
+        <p>A Rust core, an on-device speech pipeline, and a tool-calling agent &mdash; wired together so the whole thing feels like one keystroke.</p>
+      </div>
+      <div class="grid-6">
+        <div class="card reveal">
+          <div class="icon-tile"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg></div>
+          <h3>On-device speech-to-text</h3>
+          <p>whisper.cpp with Silero voice-activity detection turns speech to text in about a second &mdash; offline, private, and never persisted.</p>
+        </div>
+        <div class="card reveal">
+          <div class="icon-tile"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+          <h3>Confirm before acting</h3>
+          <p>Default-deny classification: only an explicit read-only allowlist skips the gate. Everything else shows the exact tool and parameters and waits for your yes.</p>
+        </div>
+        <div class="card reveal">
+          <div class="icon-tile"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 17H7a5 5 0 0 1 0-10h2"/><path d="M15 7h2a5 5 0 0 1 0 10h-2"/><line x1="8" y1="12" x2="16" y2="12"/></svg></div>
+          <h3>Connect your whole stack</h3>
+          <p>One-click Google Workspace connectors with built-in OAuth, GitHub, your filesystem &mdash; plus a custom entry for any server that speaks MCP. Toggle each on or off.</p>
+        </div>
+        <div class="card reveal">
+          <div class="icon-tile"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 7a5 5 0 1 0 5 5"/><circle cx="12" cy="12" r="1"/><path d="M21 3l-9 9"/></svg></div>
+          <h3>Cloud or fully local reasoning</h3>
+          <p>Groq for fast cloud inference by default, or Ollama to keep reasoning on your own hardware. One toggle in settings &mdash; the rest of the pipeline is identical.</p>
+        </div>
+        <div class="card reveal">
+          <div class="icon-tile"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.2 2.2M16.9 16.9l2.2 2.2M4.9 19.1l2.2-2.2M16.9 7.1l2.2-2.2"/></svg></div>
+          <h3>Ambient context</h3>
+          <p>Vox knows which app you&rsquo;re in front of, so &ldquo;open a new tab in this app&rdquo; just resolves &mdash; no repeating yourself, no explaining where you are.</p>
+        </div>
+        <div class="card reveal">
+          <div class="icon-tile"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+          <h3>Secrets stay in the keychain</h3>
+          <p>API keys and OAuth tokens live in the OS keychain &mdash; never in config files or logs. Local channels are token-authenticated; the UI runs under a strict CSP.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================== privacy ============================ -->
+  <section class="privacy" id="privacy">
+    <div class="wrap privacy-grid">
+      <div>
+        <div class="section-head reveal" style="margin-bottom:36px">
+          <span class="mono-label" style="color:var(--blue-300)">Private by default</span>
+          <h2>Your voice is not a product.</h2>
+          <p>Most voice assistants are microphones for someone else&rsquo;s cloud. Vox is architected the other way around: privacy is the default state, and every exception is one you explicitly choose.</p>
+        </div>
+        <ul class="checks">
+          <li><svg width="17" height="17" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-8 8a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L8 12.6l7.3-7.3a1 1 0 0 1 1.4 0Z"/></svg><span><strong>Audio is transcribed on-device</strong> and processed in memory &mdash; never uploaded, never written to disk, never retained.</span></li>
+          <li><svg width="17" height="17" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-8 8a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L8 12.6l7.3-7.3a1 1 0 0 1 1.4 0Z"/></svg><span><strong>Transcripts vanish with the window</strong> unless you opt in to local history &mdash; and switching it off erases what was saved.</span></li>
+          <li><svg width="17" height="17" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-8 8a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L8 12.6l7.3-7.3a1 1 0 0 1 1.4 0Z"/></svg><span><strong>Secrets never touch config files.</strong> Keys and tokens live in the macOS Keychain or Windows Credential Manager, full stop.</span></li>
+          <li><svg width="17" height="17" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-8 8a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L8 12.6l7.3-7.3a1 1 0 0 1 1.4 0Z"/></svg><span><strong>Local mode goes all the way.</strong> With Ollama, speech, reasoning, and action all run on your hardware &mdash; no network required.</span></li>
+        </ul>
+      </div>
+      <div class="stat-stack reveal">
+        <div class="stat"><div class="big"><span class="u">0</span> audio uploads</div><p>Speech recognition runs entirely on your machine, in memory.</p></div>
+        <div class="stat"><div class="big"><span class="u">1</span> explicit yes</div><p>Required before every single side-effecting action. No exceptions.</p></div>
+        <div class="stat"><div class="big"><span class="u">100%</span> open source</div><p>Every line that hears your voice is on GitHub, under Apache-2.0.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================== comparison ========================== -->
+  <section id="compare">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="mono-label accent">Why Vox</span>
+        <h2>Built different, on purpose.</h2>
+        <p>Voice AI isn&rsquo;t new. Voice AI that acts on your desktop, keeps your audio local, and asks before touching anything &mdash; that&rsquo;s the gap Vox fills.</p>
+      </div>
+      <div class="compare-scroll reveal">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col"></th>
+              <th scope="col" class="vox-col">Vox</th>
+              <th scope="col">Cloud AI assistants</th>
+              <th scope="col">Built-in OS assistants</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Acts across your apps</td>
+              <td class="vox-col"><span class="yes">&#10003;</span> tools + system actions<span class="sub">files, GitHub, Google Workspace, dictation</span></td>
+              <td><span class="part">~</span> chat first, actions bolted on</td>
+              <td><span class="part">~</span> fixed set of built-in intents</td>
+            </tr>
+            <tr>
+              <td>On-device speech recognition</td>
+              <td class="vox-col"><span class="yes">&#10003;</span> whisper.cpp, in memory</td>
+              <td><span class="no">&#10007;</span> audio leaves your machine</td>
+              <td><span class="part">~</span> varies, often cloud-assisted</td>
+            </tr>
+            <tr>
+              <td>Asks before side effects</td>
+              <td class="vox-col"><span class="yes">&#10003;</span> every write, exact params</td>
+              <td><span class="no">&#10007;</span> usually acts or refuses</td>
+              <td><span class="no">&#8212;</span> too limited to matter</td>
+            </tr>
+            <tr>
+              <td>Bring your own model</td>
+              <td class="vox-col"><span class="yes">&#10003;</span> Groq or local Ollama</td>
+              <td><span class="no">&#10007;</span> their model, their terms</td>
+              <td><span class="no">&#10007;</span></td>
+            </tr>
+            <tr>
+              <td>Extensible connectors</td>
+              <td class="vox-col"><span class="yes">&#10003;</span> any MCP server</td>
+              <td><span class="part">~</span> curated plugin catalogs</td>
+              <td><span class="no">&#10007;</span></td>
+            </tr>
+            <tr>
+              <td>Open source</td>
+              <td class="vox-col"><span class="yes">&#10003;</span> Apache-2.0</td>
+              <td><span class="no">&#10007;</span></td>
+              <td><span class="no">&#10007;</span></td>
+            </tr>
+            <tr>
+              <td>Price</td>
+              <td class="vox-col">Free<span class="sub">bring a free Groq key, or run local</span></td>
+              <td>Subscription</td>
+              <td>Free</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= open source ========================== -->
+  <section class="oss">
+    <div class="wrap">
+      <div class="inner reveal">
+        <span class="mono-label accent">Apache-2.0</span>
+        <h2>Own your assistant.</h2>
+        <p class="lede">Vox is built in the open &mdash; a Rust + Tauri core, a TypeScript LangGraph agent, and a protocol-first architecture you can read end to end. Fork it, extend it, point it at your own MCP servers. No accounts, no telemetry, no subscription.</p>
+        <div class="oss-ctas">
+          <a class="btn btn-primary" href="https://github.com/umer-2k1/voxi-voice-assistant" rel="noopener">
+            <svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .25a.75.75 0 0 1 .67.42l1.88 3.8 4.2.62a.75.75 0 0 1 .42 1.28l-3.04 2.96.72 4.18a.75.75 0 0 1-1.09.79L8 12.35l-3.76 1.97a.75.75 0 0 1-1.09-.79l.72-4.18L.83 6.37a.75.75 0 0 1 .42-1.28l4.2-.61L7.33.67A.75.75 0 0 1 8 .25Z"/></svg>
+            Star on GitHub
+          </a>
+          <a class="btn btn-ghost" href="https://github.com/umer-2k1/voxi-voice-assistant/blob/main/docs/SETUP.md" rel="noopener">Read the setup guide</a>
+        </div>
+        <div class="proto-note"><span class="cdot"></span>Prototype in active development &mdash; builds from source in minutes, sharp edges included.</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ============================= footer ============================= -->
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div>
+        <a class="brand" href="#top"><img src="icon.png" alt="" width="24" height="24" />Vox</a>
+        <p class="tag">The open-source voice agent for your desktop. Hold a key, speak, and it&rsquo;s done.</p>
+      </div>
+      <div class="foot-links">
+        <div class="col">
+          <span class="mono-label">Product</span>
+          <a href="#how">How it works</a>
+          <a href="#features">Features</a>
+          <a href="#privacy">Privacy</a>
+          <a href="#compare">Compare</a>
+        </div>
+        <div class="col">
+          <span class="mono-label">Project</span>
+          <a href="https://github.com/umer-2k1/voxi-voice-assistant" rel="noopener">GitHub</a>
+          <a href="https://github.com/umer-2k1/voxi-voice-assistant/blob/main/docs/SETUP.md" rel="noopener">Setup guide</a>
+          <a href="https://github.com/umer-2k1/voxi-voice-assistant/blob/main/docs/HOW-IT-WORKS.md" rel="noopener">Architecture</a>
+          <a href="https://github.com/umer-2k1/voxi-voice-assistant/blob/main/LICENSE" rel="noopener">License</a>
+        </div>
+      </div>
+    </div>
+    <div class="legal">
+      <span>&copy; <span id="year">2026</span> Vox contributors &middot; Apache-2.0</span>
+      <span>Built with Tauri, whisper.cpp, and LangGraph.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduced && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            e.target.classList.add('in');
+            io.unobserve(e.target);
+          }
+        }
+      },
+      { threshold: 0.12 }
+    );
+    document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+  } else {
+    document.querySelectorAll('.reveal').forEach((el) => el.classList.add('in'));
+  }
+</script>
+
+</body>
+</html>

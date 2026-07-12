@@ -10,7 +10,8 @@ Session-by-session record of what was implemented. Newest first.
 - **Planner**: no fallback to non-tool-capable Ollama models; few-shot examples in the system prompt.
 - **Ambient context v1**: frontmost app annotates each utterance (`context_snapshot` system action) — "this app" references resolve.
 - **Cleanup/CI**: template leftovers gone; CI gains all-package lint, protocol tests, Playwright smoke.
-- Six commits pushed incrementally to `feat/google-workspace-connectors`. Skipped by user decision: signing/notarization/auto-update/telemetry (point 7).
+- **Landing page**: `site/index.html` marketing page in the Halcyon theme + `deploy-pages` workflow (GitHub Pages via Actions; user enables the Pages source once). Verified at desktop and 375px widths.
+- Commits pushed incrementally to `feat/google-workspace-connectors`. Skipped by user decision: signing/notarization/auto-update/telemetry (point 7).
 
 ## Session 2 — 2026-07-11: Google connectors, full permissions onboarding, hardening
 
