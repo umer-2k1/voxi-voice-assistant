@@ -58,7 +58,7 @@ export class CoreBridge {
   }
 
   async systemAction(
-    action: 'open_path' | 'insert_text',
+    action: 'open_path' | 'insert_text' | 'context_snapshot',
     args: Record<string, unknown>
   ): Promise<{ ok: boolean; detail?: string }> {
     const response = await this.request('system_action', { action, args });

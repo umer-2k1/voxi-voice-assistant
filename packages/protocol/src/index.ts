@@ -217,7 +217,9 @@ export const SystemActionMessage = z.object({
   type: z.literal('system_action'),
   id: z.string(),
   payload: z.object({
-    action: z.enum(['open_path', 'insert_text']),
+    // context_snapshot reads the frontmost app for planner context; its
+    // system_result carries the snapshot JSON in `detail`.
+    action: z.enum(['open_path', 'insert_text', 'context_snapshot']),
     args: z.record(z.string(), z.unknown())
   })
 });

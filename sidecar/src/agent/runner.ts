@@ -2,6 +2,7 @@ import { AIMessage } from '@langchain/core/messages';
 import { Command } from '@langchain/langgraph';
 import type { Settings } from '@vox/protocol';
 
+import { coreBridge } from '../core-bridge.js';
 import type { VoxAgent } from './graph.js';
 import { buildAgent } from './graph.js';
 
@@ -38,7 +39,26 @@ export class AgentRunner {
   }
 
   async utterance(text: string, threadId: string, events: AgentEvents): Promise<void> {
-    await this.run({ messages: [{ role: 'user', content: text }] }, threadId, events);
+    // Ambient context v1: annotate the utterance with where the user is,
+    // so "this app"-style references resolve. Best-effort — never blocks
+    // the command on a context failure.
+    const context = await this.contextLine();
+    const content = context === null ? text : `${text}\n\n(${context})`;
+    await this.run({ messages: [{ role: 'user', content }] }, threadId, events);
+  }
+
+  private async contextLine(): Promise<string | null> {
+    try {
+      const result = await coreBridge.systemAction('context_snapshot', {});
+      if (!result.ok || result.detail === undefined) return null;
+      const snapshot = JSON.parse(result.detail) as { frontmost_app?: string | null };
+      if (typeof snapshot.frontmost_app !== 'string' || snapshot.frontmost_app === '') {
+        return null;
+      }
+      return `context: the app the user is in right now is ${snapshot.frontmost_app}`;
+    } catch {
+      return null;
+    }
   }
 
   async confirmResponse(id: string, approved: boolean, events: AgentEvents): Promise<void> {

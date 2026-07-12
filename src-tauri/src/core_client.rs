@@ -129,24 +129,34 @@ fn handle_frame(
             let app = app.clone();
             // System actions can block (enigo typing) — keep the read loop free.
             std::thread::spawn(move || {
-                let result = match action.as_str() {
+                // Ok(Some(json)) = data-bearing action; Ok(None) = fire-and-forget.
+                let result: Result<Option<String>, String> = match action.as_str() {
                     "open_path" => crate::commands::system::open_path_impl(
                         args["path"].as_str().unwrap_or_default(),
-                    ),
+                    )
+                    .map(|()| None),
                     "insert_text" => crate::commands::system::insert_text_impl(
                         args["text"].as_str().unwrap_or_default(),
-                    ),
+                    )
+                    .map(|()| None),
+                    "context_snapshot" => {
+                        crate::commands::system::context_snapshot_impl().map(Some)
+                    }
                     other => Err(format!("unknown system action: {other}")),
                 };
-                log::info!("system_action {action}: {result:?}");
+                log::info!("system_action {action}: ok={}", result.is_ok());
                 if let Err(ref message) = result {
                     let _ = tauri::Emitter::emit(&app, "system-action-error", message.clone());
                 }
+                let detail = match &result {
+                    Ok(data) => data.clone(),
+                    Err(message) => Some(message.clone()),
+                };
                 let _ = tx.send(
                     json!({
                         "type": "system_result",
                         "id": id,
-                        "payload": { "ok": result.is_ok(), "detail": result.err() }
+                        "payload": { "ok": result.is_ok(), "detail": detail }
                     })
                     .to_string(),
                 );

@@ -34,7 +34,7 @@ Sidecar binds `127.0.0.1:0`, prints `{"port": N}` on stdout. All messages are JS
 |---|---|---|
 | `get_secret` | sidecar → core | `{secret_ref}` |
 | `secret_value` | core → sidecar | `{secret_ref, value}` |
-| `system_action` | sidecar → core | `{action: "open_path" \| "insert_text", args}` |
+| `system_action` | sidecar → core | `{action: "open_path" \| "insert_text" \| "context_snapshot", args}` — `context_snapshot` returns the frontmost app JSON in `system_result.detail` (planner ambient context) |
 | `system_result` | core → sidecar | `{ok, detail?}` |
 | `config_updated` | core → sidecar | `{connectors, settings}` — pushed at spawn and on change |
 
