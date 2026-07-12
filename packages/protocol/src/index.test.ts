@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { OAuthPreset, parseInbound } from './index.js';
+import { LlmProvider, OAuthPreset, parseInbound, Settings } from './index.js';
 
 const frame = (payload: Record<string, unknown>): string =>
   JSON.stringify({ type: 'oauth_start', id: 'abc', payload });
@@ -46,6 +46,34 @@ test('preset client_id is optional (re-auth reuses stored credentials)', () => {
     scopes: []
   });
   assert.equal(result.success, true);
+});
+
+test('settings accept every provider in the enum', () => {
+  for (const provider of LlmProvider.options) {
+    const result = Settings.safeParse({
+      hotkey: 'alt+space',
+      llm_provider: provider,
+      llm_model: 'some-model',
+      stt_model: 'base.en'
+    });
+    assert.equal(result.success, true, provider);
+  }
+});
+
+test('list_models parses for a new provider and rejects unknown ones', () => {
+  const ok = parseInbound(
+    JSON.stringify({ type: 'list_models', id: 'm1', payload: { provider: 'anthropic' } })
+  );
+  assert.equal(ok?.type, 'list_models');
+  const bad = parseInbound(
+    JSON.stringify({ type: 'list_models', id: 'm2', payload: { provider: 'skynet' } })
+  );
+  assert.equal(bad, null);
+});
+
+test('test_llm parses with an empty payload', () => {
+  const parsed = parseInbound(JSON.stringify({ type: 'test_llm', id: 't1', payload: {} }));
+  assert.equal(parsed?.type, 'test_llm');
 });
 
 test('preset without token_endpoint is rejected', () => {

@@ -1,4 +1,4 @@
-import type { ConnectorConfig, OAuthPreset } from '@vox/protocol';
+import type { ConnectorConfig, LlmProvider, OAuthPreset } from '@vox/protocol';
 
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
@@ -24,6 +24,24 @@ export interface OAuthResult {
 }
 
 const pendingOAuth = new Map<string, (result: OAuthResult) => void>();
+
+export interface ModelsListResult {
+  ok: boolean;
+  models: string[];
+  error?: string;
+}
+
+const pendingModels = new Map<string, (result: ModelsListResult) => void>();
+
+export interface LlmTestResult {
+  ok: boolean;
+  provider: string;
+  model: string;
+  latency_ms?: number;
+  error?: string;
+}
+
+const pendingLlmTests = new Map<string, (result: LlmTestResult) => void>();
 
 /** Browser round-trips are slow; give the user six minutes to authorize. */
 const OAUTH_TIMEOUT_MS = 6 * 60 * 1000;
@@ -183,6 +201,22 @@ function open(port: number, token: string): Promise<void> {
           }
           break;
         }
+        case 'models_list': {
+          const resolvePending = pendingModels.get(message.id);
+          if (resolvePending) {
+            pendingModels.delete(message.id);
+            resolvePending(message.payload);
+          }
+          break;
+        }
+        case 'llm_test_result': {
+          const resolvePending = pendingLlmTests.get(message.id);
+          if (resolvePending) {
+            pendingLlmTests.delete(message.id);
+            resolvePending(message.payload);
+          }
+          break;
+        }
       }
     });
     ws.addEventListener('close', () => {
@@ -244,6 +278,47 @@ export function startOAuth(
         resolve({ ok: false, error: 'Authorization timed out.' });
       }
     }, OAUTH_TIMEOUT_MS);
+    socket?.send(frame);
+  });
+}
+
+/** Fetch the live model catalog for a provider (Settings → Reasoning). */
+export function listProviderModels(provider: LlmProvider): Promise<ModelsListResult> {
+  if (socket?.readyState !== WebSocket.OPEN) {
+    return Promise.resolve({ ok: false, models: [], error: 'Agent is not connected yet.' });
+  }
+  const id = crypto.randomUUID();
+  const frame = JSON.stringify({ type: 'list_models', id, payload: { provider } });
+  return new Promise((resolve) => {
+    pendingModels.set(id, resolve);
+    setTimeout(() => {
+      if (pendingModels.delete(id)) {
+        resolve({ ok: false, models: [], error: 'Fetching models timed out.' });
+      }
+    }, 20_000);
+    socket?.send(frame);
+  });
+}
+
+/** One-token smoke test of the saved provider + model + key. */
+export function testLlmConnection(): Promise<LlmTestResult> {
+  if (socket?.readyState !== WebSocket.OPEN) {
+    return Promise.resolve({
+      ok: false,
+      provider: '',
+      model: '',
+      error: 'Agent is not connected yet.'
+    });
+  }
+  const id = crypto.randomUUID();
+  const frame = JSON.stringify({ type: 'test_llm', id, payload: {} });
+  return new Promise((resolve) => {
+    pendingLlmTests.set(id, resolve);
+    setTimeout(() => {
+      if (pendingLlmTests.delete(id)) {
+        resolve({ ok: false, provider: '', model: '', error: 'Connection test timed out.' });
+      }
+    }, 40_000);
     socket?.send(frame);
   });
 }

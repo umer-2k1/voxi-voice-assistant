@@ -28,6 +28,10 @@ Sidecar binds `127.0.0.1:0`, prints `{"port": N}` on stdout. All messages are JS
 | `connector_test_result` | sidecar → ui | `{ok, tools, error?}` |
 | `oauth_start` | ui → sidecar | `{server_url, secret_ref, name, preset?}` — `preset` (`{client_id?, client_secret?, authorization_endpoint, token_endpoint, scopes, extra_auth_params?}`) skips discovery + dynamic registration for providers without it (Google); omitted `client_id` on re-auth reuses the stored client |
 | `oauth_result` | sidecar → ui | `{ok, error?}` — token set is already in the keychain when `ok` |
+| `list_models` | ui → sidecar | `{provider}` — fetch the provider's live model catalog (Settings → Reasoning); the sidecar reads the key from the keychain, the webview never sees it |
+| `models_list` | sidecar → ui | `{ok, models, error?}` |
+| `test_llm` | ui → sidecar | `{}` — one-token smoke test of the saved provider + model + key |
+| `llm_test_result` | sidecar → ui | `{ok, provider, model, latency_ms?, error?}` |
 
 **Core role (privileged):**
 | Message | Direction | Payload |

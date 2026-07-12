@@ -5,6 +5,9 @@
  * Binds a WebSocket server to 127.0.0.1 on an OS-assigned port and prints
  * `{"port": N}` on stdout so the core can complete the handshake.
  */
+import type { Settings } from '@vox/protocol';
+
+import { listModels, testLlm } from './agent/models.js';
 import type { AgentEvents } from './agent/runner.js';
 import { AgentRunner } from './agent/runner.js';
 import { coreBridge } from './core-bridge.js';
@@ -19,6 +22,8 @@ if (!token) {
 }
 
 const runner = new AgentRunner();
+/** Last settings pushed by the core; what `test_llm` exercises. */
+let currentSettings: Settings | null = null;
 
 const handle = await startServer(token, {
   onUiMessage(message) {
@@ -81,6 +86,33 @@ const handle = await startServer(token, {
           );
         break;
       }
+      case 'list_models': {
+        // Settings → Reasoning: live model catalog for the provider.
+        const { id } = message;
+        void listModels(message.payload.provider)
+          .then((models) => handle.toUi({ type: 'models_list', id, payload: { ok: true, models } }))
+          .catch((error: unknown) => {
+            const detail = error instanceof Error ? error.message : String(error);
+            handle.toUi({ type: 'models_list', id, payload: { ok: false, models: [], error: detail } });
+          });
+        break;
+      }
+      case 'test_llm': {
+        // Settings → Reasoning: one-token smoke test of key + model.
+        const { id } = message;
+        if (!currentSettings) {
+          handle.toUi({
+            type: 'llm_test_result',
+            id,
+            payload: { ok: false, provider: '', model: '', error: 'Agent is not configured yet.' }
+          });
+          break;
+        }
+        void testLlm(currentSettings).then((result) =>
+          handle.toUi({ type: 'llm_test_result', id, payload: result })
+        );
+        break;
+      }
       default:
         break;
     }
@@ -90,6 +122,7 @@ const handle = await startServer(token, {
     if (coreBridge.handle(message)) return;
 
     if (message.type === 'config_updated') {
+      currentSettings = message.payload.settings;
       void (async () => {
         try {
           await mcpManager.rebuild(message.payload.connectors);

@@ -4,11 +4,8 @@ import type { Settings } from '@vox/protocol';
 
 import { invoke } from '@tauri-apps/api/core';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import OllamaModelPicker from '@/components/vox/ollama-model-picker';
 import PermissionList from '@/components/vox/permission-list';
+import ReasoningSettings from '@/components/vox/reasoning-settings';
 import { cn } from '@/lib/utils';
 import {
   disableTranscriptPersistence,
@@ -16,24 +13,19 @@ import {
   isTranscriptPersistenceEnabled
 } from '@/stores/session';
 
-const GROQ_KEY_REF = 'groq_api_key';
-
 const STT_MODELS = [
   { key: 'small', label: 'small — default, needs a capable CPU (466 MB)' },
   { key: 'base.en', label: 'base.en — fast, English only (142 MB)' },
   { key: 'large-v3', label: 'large-v3 — best quality, slow (2.9 GB)' }
 ];
 
-/** Settings: hotkey, provider/model toggle (S7), STT model, Groq key (P10). */
+/** Settings: hotkey, reasoning provider/model/key (S7, P10), STT model. */
 export default function SettingsView() {
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [hasGroqKey, setHasGroqKey] = useState(false);
-  const [groqKey, setGroqKey] = useState('');
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     void invoke<Settings>('get_settings').then(setSettings);
-    void invoke<boolean>('has_secret', { secretRef: GROQ_KEY_REF }).then(setHasGroqKey);
   }, []);
 
   if (settings === null) {
@@ -76,82 +68,11 @@ export default function SettingsView() {
         />
       </Section>
 
-      <Section title='Reasoning' hint='Groq is the cloud default; Ollama runs locally.'>
-        <div className='flex items-center gap-2'>
-          {(['groq', 'ollama'] as const).map((provider) => (
-            <Button
-              key={provider}
-              size='sm'
-              variant={settings.llm_provider === provider ? 'default' : 'outline'}
-              onClick={() => {
-                void update({
-                  llm_provider: provider,
-                  llm_model: provider === 'groq' ? 'llama-3.1-8b-instant' : 'qwen3:8b'
-                });
-              }}
-            >
-              {provider === 'groq' ? 'Groq (cloud)' : 'Ollama (local)'}
-            </Button>
-          ))}
-        </div>
-        {settings.llm_provider === 'ollama' ? (
-          <OllamaModelPicker
-            value={settings.llm_model}
-            onChange={(model) => {
-              void update({ llm_model: model });
-            }}
-          />
-        ) : (
-          <div className='flex max-w-sm flex-col gap-1.5'>
-            <Label htmlFor='llm-model'>Model</Label>
-            <Input
-              id='llm-model'
-              value={settings.llm_model}
-              onChange={(event) => {
-                setSettings({ ...settings, llm_model: event.target.value });
-              }}
-              onBlur={() => {
-                void update({ llm_model: settings.llm_model });
-              }}
-            />
-          </div>
-        )}
-        {settings.llm_provider === 'groq' ? (
-          <div className='flex max-w-sm flex-col gap-1.5'>
-            <Label htmlFor='groq-key'>
-              Groq API key{' '}
-              <span className='mono-label ml-1 text-gray-400'>
-                {hasGroqKey ? 'configured · stored in keychain' : 'not set'}
-              </span>
-            </Label>
-            <div className='flex gap-2'>
-              <Input
-                id='groq-key'
-                type='password'
-                placeholder='gsk_…'
-                value={groqKey}
-                onChange={(event) => {
-                  setGroqKey(event.target.value);
-                }}
-              />
-              <Button
-                disabled={groqKey === ''}
-                onClick={() => {
-                  void invoke('store_secret', { secretRef: GROQ_KEY_REF, value: groqKey }).then(
-                    () => {
-                      setGroqKey('');
-                      setHasGroqKey(true);
-                      // Rebuild the provider with the new key.
-                      void invoke('update_settings', { settings });
-                    }
-                  );
-                }}
-              >
-                Save
-              </Button>
-            </div>
-          </div>
-        ) : null}
+      <Section
+        title='Reasoning'
+        hint='Pick a provider, save its API key once, choose a model from the live list, then test.'
+      >
+        <ReasoningSettings settings={settings} update={update} />
       </Section>
 
       <Section title='Speech to text' hint='Runs fully on-device. Changing model may download it.'>

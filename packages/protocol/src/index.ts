@@ -109,13 +109,40 @@ export const SecretStoredMessage = z.object({
   payload: z.object({ ok: z.boolean(), detail: z.string().optional() })
 });
 
+/** Reasoning providers: one local (ollama), the rest cloud APIs keyed from the keychain. */
+export const LlmProvider = z.enum(['groq', 'ollama', 'gemini', 'openai', 'anthropic']);
+export type LlmProvider = z.infer<typeof LlmProvider>;
+
 export const Settings = z.object({
   hotkey: z.string(),
-  llm_provider: z.enum(['groq', 'ollama']),
+  llm_provider: LlmProvider,
   llm_model: z.string(),
   stt_model: z.string()
 });
 export type Settings = z.infer<typeof Settings>;
+
+/**
+ * UI → sidecar: fetch the live model catalog for a provider (Settings →
+ * Reasoning dropdown). The sidecar calls the provider's list-models API
+ * with the keychain key — the key never reaches the webview, and the
+ * webview CSP forbids the call anyway.
+ */
+export const ListModelsMessage = z.object({
+  type: z.literal('list_models'),
+  id: z.string(),
+  payload: z.object({ provider: LlmProvider })
+});
+
+/**
+ * UI → sidecar: smoke-test the currently configured provider + model +
+ * key with a one-token completion. Uses the settings last pushed via
+ * `config_updated`.
+ */
+export const TestLlmMessage = z.object({
+  type: z.literal('test_llm'),
+  id: z.string(),
+  payload: z.object({})
+});
 
 export const ConfigUpdatedMessage = z.object({
   type: z.literal('config_updated'),
@@ -132,7 +159,9 @@ export const InboundMessage = z.discriminatedUnion('type', [
   SecretStoredMessage,
   ConfigUpdatedMessage,
   TestConnectorMessage,
-  OAuthStartMessage
+  OAuthStartMessage,
+  ListModelsMessage,
+  TestLlmMessage
 ]);
 export type InboundMessage = z.infer<typeof InboundMessage>;
 
@@ -205,6 +234,30 @@ export const OAuthResultMessage = z.object({
   payload: z.object({ ok: z.boolean(), error: z.string().optional() })
 });
 
+/** Sidecar → UI: reply to `list_models` (same correlation id). */
+export const ModelsListMessage = z.object({
+  type: z.literal('models_list'),
+  id: z.string(),
+  payload: z.object({
+    ok: z.boolean(),
+    models: z.array(z.string()),
+    error: z.string().optional()
+  })
+});
+
+/** Sidecar → UI: reply to `test_llm` (same correlation id). */
+export const LlmTestResultMessage = z.object({
+  type: z.literal('llm_test_result'),
+  id: z.string(),
+  payload: z.object({
+    ok: z.boolean(),
+    provider: z.string(),
+    model: z.string(),
+    latency_ms: z.number().optional(),
+    error: z.string().optional()
+  })
+});
+
 // ---------- sidecar → core ----------
 
 export const GetSecretMessage = z.object({
@@ -244,7 +297,9 @@ export const OutboundToUiMessage = z.discriminatedUnion('type', [
   ErrorMessage,
   DoneMessage,
   ConnectorTestResultMessage,
-  OAuthResultMessage
+  OAuthResultMessage,
+  ModelsListMessage,
+  LlmTestResultMessage
 ]);
 export type OutboundToUiMessage = z.infer<typeof OutboundToUiMessage>;
 

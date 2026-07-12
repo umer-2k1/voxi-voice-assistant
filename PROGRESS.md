@@ -11,6 +11,7 @@ Session-by-session record of what was implemented. Newest first.
 - **Ambient context v1**: frontmost app annotates each utterance (`context_snapshot` system action) — "this app" references resolve.
 - **Cleanup/CI**: template leftovers gone; CI gains all-package lint, protocol tests, Playwright smoke.
 - **Landing page**: `site/index.html` marketing page in the Halcyon theme + `deploy-pages` workflow (GitHub Pages via Actions; user enables the Pages source once). Verified at desktop and 375px widths.
+- **Multi-provider reasoning**: Gemini/OpenAI/Anthropic join Groq/Ollama. Per-provider keychain key management (save/replace/remove + status), live-fetched model dropdowns (`list_models` WS pair, no hardcoded catalogs), and a Test-connection smoke test (`test_llm` WS pair). Default Groq model switched to llama-3.1-8b-instant.
 - Commits pushed incrementally to `feat/google-workspace-connectors`. Skipped by user decision: signing/notarization/auto-update/telemetry (point 7).
 
 ## Session 2 — 2026-07-11: Google connectors, full permissions onboarding, hardening
