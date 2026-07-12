@@ -2,6 +2,18 @@
 
 Session-by-session record of what was implemented. Newest first.
 
+## Session 3 — 2026-07-12: distribution blocker closed, ops floor, conversation UX
+
+- **Sidecar ships**: esbuild single-file bundle (3.1 MB) as a Tauri resource, launched by system Node ≥20 in packaged builds with Node discovery + actionable errors; verified in a debug `.app`. All PENDING open questions resolved (Node over Bun; whisper.cpp built-in VAD; npx filesystem MCP).
+- **Ops floor**: rotating file logs (tauri-plugin-log) incl. sidecar stderr, panic hook, restart-agent (tray + sidebar) past the 5-respawn dead end, "Open logs folder" tray item.
+- **Conversation UX**: token streaming (`assistant_delta`), new-conversation reset, opt-in transcript persistence (Privacy toggle, default off).
+- **Planner**: no fallback to non-tool-capable Ollama models; few-shot examples in the system prompt.
+- **Ambient context v1**: frontmost app annotates each utterance (`context_snapshot` system action) — "this app" references resolve.
+- **Cleanup/CI**: template leftovers gone; CI gains all-package lint, protocol tests, Playwright smoke.
+- Six commits pushed incrementally to `feat/google-workspace-connectors`. Skipped by user decision: signing/notarization/auto-update/telemetry (point 7).
+
+## Session 2 — 2026-07-11: Google connectors, full permissions onboarding, hardening
+
 ## Session 2 — 2026-07-11: Google connectors, full permissions onboarding, hardening
 
 - **Google Workspace connectors** — Gmail/Drive/Calendar/Chat via Google's official hosted MCP servers. New OAuth *preset* flow (no DCR): user pastes a one-time GCP OAuth client, sidecar runs PKCE against Google, one consent covers all four via a shared `google_oauth` token set. Reconnect reuses stored client creds; `remove_server` refcounts shared secrets. Protocol `oauth_start.preset` (+ first protocol unit tests, `tsx --test`).
